@@ -1,0 +1,47 @@
+{
+  "name": "hue-hmdi-sync",
+  "version": "1.0.0",
+  "description": "command line interface",
+  "main": "build/index.js",
+  "scripts": {
+    "start": "node build/index.js",
+    "build": "npm run clean && swc src -d build --ignore */**/*.spec.ts",
+    "dev": "npm run build && npm start",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "clean": "rm -rf build && mkdir build"
+  },
+  "author": "Jose Munoz",
+  "license": "ISC",
+  "dependencies": {
+    "@oclif/core": "^1.0.10",
+    "ink": "^3.2.0",
+    "ink-big-text": "^1.2.0",
+    "ink-gradient": "^2.0.0",
+    "ink-select-input": "^4.2.1",
+    "ink-spinner": "^4.0.3",
+    "opencv4nodejs": "^5.6.0",
+    "react": "^17.0.2",
+    "react-error-boundary": "^3.1.4",
+    "react-router": "^6.1.1",
+    "regenerator-runtime": "^0.13.9",
+    "unfetch": "^4.2.0",
+    "ws": "^8.3.0",
+    "xhr2": "^0.2.1"
+  },
+  "devDependencies": {
+    "@swc/cli": "^0.1.53",
+    "@swc/core": "^1.2.119",
+    "@swc/jest": "^0.2.12",
+    "@types/jest": "^27.0.3",
+    "@types/react": "^17.0.37",
+    "chokidar": "^3.5.2",
+    "concurrently": "^6.4.0",
+    "jest": "^27.4.4"
+  },
+  "opencv4nodejs": {
+    "disableAutoBuild": 1,
+    "opencvIncludeDir": "../../opencv/include",
+    "opencvLibDir": "../../opencv/lib",
+    "opencvBinDir": "../../opencv/bin"
+  }
+}
