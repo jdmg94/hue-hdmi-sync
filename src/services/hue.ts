@@ -10,7 +10,7 @@ import {
   Light,
 } from "../types/Hue"
 
-const BridgeClientCredentialsPath = "./hue-bridge-client-credentials.json"
+const BridgeClientCredentialsPath = "./client.json"
 
 export const discoverHueBridges = async (): Promise<
   HueBridgeNetworkDevice[]

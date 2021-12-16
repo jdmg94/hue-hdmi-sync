@@ -41,7 +41,12 @@ const BridgeConfig = () => {
         const entertainmentGroups = groupsArray.filter(
           (item) => item.type === "Entertainment"
         )
-        setLightGroups(entertainmentGroups as LightGroup[])
+
+        if (entertainmentGroups.length === 1) {
+          submitEntertainmentGroup(entertainmentGroups[0])
+        } else {
+          setLightGroups(entertainmentGroups as LightGroup[])
+        }
       }
     }
 
