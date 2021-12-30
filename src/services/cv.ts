@@ -24,20 +24,24 @@ export const getVideoSources = (): Promise<string[]> =>
     })
   })
 
+export const hasVideoSources = async (): Promise<boolean> => {
+  const videoSources = await getVideoSources()
+
+  return videoSources.length > 0
+}
+
 export const openVideoInput = () => {
   try {
     const capture = new cv2.VideoCapture(cv2.CAP_ANY)
-
-    const height = capture.get(cv2.CAP_PROP_FRAME_HEIGHT)
-    const width = capture.get(cv2.CAP_PROP_FRAME_WIDTH)
-
     capture.set(cv2.CAP_PROP_BUFFERSIZE, 0)
 
+    const frame = capture.read()
+    const channels = cv2.mean(frame)
+
+    cv2.imwrite("./testimage.jpg", frame)
+
     capture.release()
-
-    console.log("video capture dimensions", height, width)
-  } catch (error) {
-
-    console.log("the fuck man?", error)
+  } catch (err) {
+    console.log(err)
   }
 }

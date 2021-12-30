@@ -1,28 +1,25 @@
-import React, { useState, useEffect } from "react"
 import { Text } from "ink"
+import React, { useState, useEffect } from "react"
 
-import { openVideoInput, getVideoSources } from "../services/cv"
-import { getBridgeLights } from "../services/hue"
 import { useBridgeContext, BridgeState } from "../context/hueBridge"
+import { getBridgeLights, setGroupStreamingMode } from "../services/hue"
 
 const LightsSetup = () => {
   const { state } = useBridgeContext()
-  const { selectedEntertainmentGroup, credentials, bridgeNetworkDevice } =
+  const [lights, setLights] = useState(null)
+  const { entertainmentGroup, credentials, bridgeNetworkDevice } =
     state as BridgeState
 
   useEffect(() => {
-    // console.log("locations", selectedEntertainmentGroup.locations)
+    getBridgeLights(bridgeNetworkDevice.internalipaddress, credentials).then(
+      (lights) => {
+        const lightsSelection = entertainmentGroup.lights.map(
+          (light) => ({ id: light, ...lights[light] })
+        )
 
-    openVideoInput()
-    // getVideoSources().then(sources => {
-    //   console.log('how many sources', sources.length, sources)
-    // })
-
-    // getBridgeLights(bridgeNetworkDevice.internalipaddress, credentials).then(
-    // (lights) => {
-    // console.log("the lights", lights)
-    // }
-    // )
+        setLights(lightsSelection)
+      }
+    )
   }, [])
 
   return <Text>Hello from lights setup</Text>

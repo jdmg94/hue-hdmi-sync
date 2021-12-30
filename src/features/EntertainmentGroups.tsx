@@ -12,12 +12,12 @@ import {
 import { getBridgeGroups, clearPersistedCredentials } from "../services/hue"
 
 const BridgeConfig = () => {
+  const navigate = useNavigate()
+  const [lightGroups, setLightGroups] = useState<LightGroup[]>([])
   const {
     dispatch,
     state: { bridgeNetworkDevice, credentials },
   } = useBridgeContext()
-  const navigate = useNavigate()
-  const [lightGroups, setLightGroups] = useState<LightGroup[]>([])
   const submitEntertainmentGroup = (lightGroup: LightGroup) => {
     dispatch({ payload: lightGroup, type: SET_lIGHT_GROUP })
     navigate("/lights")
@@ -36,7 +36,7 @@ const BridgeConfig = () => {
         // #NOTE: stale credentials
         await clearPersistedCredentials()
         dispatch({ payload: null, type: SET_CREDENTIALS })
-        navigate("/setup")
+        navigate("/bridge-setup")
       } else {
         const entertainmentGroups = groupsArray.filter(
           (item) => item.type === "Entertainment"

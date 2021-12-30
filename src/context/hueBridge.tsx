@@ -10,14 +10,14 @@ export interface BridgeState {
   bridgeConfig?: BridgeConfig
   credentials?: BridgeClientCredentials
   bridgeNetworkDevice?: HueBridgeNetworkDevice
-  selectedEntertainmentGroup?: LightGroup
+  entertainmentGroup?: LightGroup
 }
 
 const initialState: BridgeState = {
   credentials: null,
   bridgeConfig: null,
   bridgeNetworkDevice: null,
-  selectedEntertainmentGroup: null,
+  entertainmentGroup: null,
 }
 
 type Action<T = {}> = {
@@ -48,7 +48,7 @@ const reducer = (
 
       return {
         ...state,
-        selectedEntertainmentGroup: payload,
+        entertainmentGroup: payload,
       }
     },
     [SET_BRIDGE]: () => {

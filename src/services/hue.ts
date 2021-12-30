@@ -1,5 +1,6 @@
 import fetch from "unfetch"
-import { spawn } from 'child_process'
+import { Vec4 } from "opencv4nodejs"
+import { spawn } from "child_process"
 import { access, readFile, writeFile, removeFile } from "./filesystem"
 import {
   HueBridgeNetworkDevice,
@@ -140,4 +141,46 @@ export const setGroupStreamingMode = async (
   const data = await response.json()
 
   console.log("data")
+}
+
+export const startSSLChannel = (
+  url: string,
+  credentials: BridgeClientCredentials
+) => {
+  const process = spawn("openssl", [
+    "s_client",
+    "-dtls1_2",
+    "-cipher",
+    "PSK-AES128-GCM-SHA256",
+    "-psk_identity",
+    credentials.username,
+    "-psk",
+    credentials.clientkey,
+    "-connect",
+    `${url}:2100`,
+  ])
+
+  return {
+    registerListener: (listener: (data: string) => void) => {
+      process.stdout.on("data", listener)
+    },
+    sendMessage: (message: string) => {
+      process.stdin.write(message)
+    },
+    close: () => {
+      process.kill()
+    },
+  }
+}
+
+export const prepareBufferForStreaming = (channels: Vec4) => {
+  const channeldata = [channels.x, channels.y, channels.z].map((channel) =>
+    Math.floor(channel / 2)
+  )
+
+  return Buffer.concat([
+    Buffer.from("HueStream"),
+    Buffer.from([0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01]),
+    Buffer.from(channeldata),
+  ]).toString("utf-8")
 }

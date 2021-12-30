@@ -30,7 +30,7 @@ const DiscoverBridges = () => {
     if (currentAPIVersion > MIN_HUE_API_VERSION) {
       dispatch({ payload: config, type: SET_BRIDGE_CONFIG })
       dispatch({ type: SET_BRIDGE, payload: bridge })
-      navigate("/setup")
+      navigate("/bridge-setup")
     } else {
       setErrorMessage(
         `Bridge API version too old (${currentAPIVersion}), the minimum API version is ${MIN_HUE_API_VERSION}, please update your bridge throught the Hue App`

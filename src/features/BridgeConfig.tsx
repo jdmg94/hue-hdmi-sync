@@ -19,16 +19,16 @@ const isChristmas = () => {
 }
 
 const BridgeConfig = () => {
+  const navigate = useNavigate()
+  const [status, updateStatus] = useState<StatusType>(Status.IDLE)
+  const [needsCredentials, updateCredentialNeeds] = useState<boolean>(false)
   const {
     dispatch,
     state: { bridgeNetworkDevice },
   } = useBridgeContext()
-  const navigate = useNavigate()
-  const [status, updateStatus] = useState<StatusType>(Status.IDLE)
-  const [needsCredentials, updateCredentialNeeds] = useState<boolean>(false)
   const submitCredentials = (credentials: BridgeClientCredentials) => {
     dispatch({ payload: credentials, type: SET_CREDENTIALS })
-    navigate("/light-groups")
+    navigate("/entertainment-groups")
   }
 
   useEffect(() => {
