@@ -40,9 +40,7 @@
     "jest": "^27.4.4"
   },
   "opencv4nodejs": {
-    "disableAutoBuild": 1,
-    "opencvIncludeDir": "../../opencv/include",
-    "opencvLibDir": "../../opencv/lib",
-    "opencvBinDir": "../../opencv/bin"
+    "autoBuildOpencvVersion": "4.5.4",
+    "autoBuildWithoutContrib": true
   }
 }
