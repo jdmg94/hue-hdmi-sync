@@ -3,34 +3,42 @@ import SelectInput from "ink-select-input"
 import { useNavigate } from "react-router"
 import React, { useEffect, useState } from "react"
 
-import { LightGroup } from "../types/Hue"
 import {
   useBridgeContext,
   SET_lIGHT_GROUP,
   SET_CREDENTIALS,
 } from "../context/hueBridge"
-import { getBridgeGroups, clearPersistedCredentials } from "../services/hue"
+import {
+  getBridgeGroups,
+  setGroupStreamingMode,
+  clearPersistedCredentials,
+} from "../services/hue"
+import { LightGroup } from "../types/Hue"
 
-const BridgeConfig = () => {
+const EntertainmentGroups = () => {
   const navigate = useNavigate()
   const [lightGroups, setLightGroups] = useState<LightGroup[]>([])
   const {
     dispatch,
     state: { bridgeNetworkDevice, credentials },
   } = useBridgeContext()
+
   const submitEntertainmentGroup = (lightGroup: LightGroup) => {
     dispatch({ payload: lightGroup, type: SET_lIGHT_GROUP })
-    navigate("/lights")
+    setGroupStreamingMode({
+      credentials,
+      active: true,
+      groupId: Number(lightGroup.name),
+      url: bridgeNetworkDevice.internalipaddress,
+    }).then(() => navigate("/lights"))
   }
 
   useEffect(() => {
     async function retrieveBridgeData() {
-      const groupsNormalized = await getBridgeGroups(
+      const groupsArray = await getBridgeGroups(
         bridgeNetworkDevice.internalipaddress,
         credentials
       )
-
-      const groupsArray: LightGroup[] = Object.values(groupsNormalized)
 
       if (groupsArray.length === 0) {
         // #NOTE: stale credentials
@@ -45,7 +53,7 @@ const BridgeConfig = () => {
         if (entertainmentGroups.length === 1) {
           submitEntertainmentGroup(entertainmentGroups[0])
         } else {
-          setLightGroups(entertainmentGroups as LightGroup[])
+          setLightGroups(entertainmentGroups)
         }
       }
     }
@@ -56,11 +64,10 @@ const BridgeConfig = () => {
   return (
     <>
       <Text>
-        Multiple entertainment groups found! Please select one of the following
-        options:
+        Multiple entertainment groups found! Please select from below:
       </Text>
       <SelectInput
-        onSelect={(item) => submitEntertainmentGroup(item.value)}
+        onSelect={({ value }) => submitEntertainmentGroup(value)}
         items={lightGroups.map((item) => ({
           value: item,
           key: item.name,
@@ -71,4 +78,4 @@ const BridgeConfig = () => {
   )
 }
 
-export default BridgeConfig
+export default EntertainmentGroups

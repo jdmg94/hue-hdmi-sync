@@ -1,6 +1,4 @@
-export type Normalized<T> = {
-  [id: string]: T
-}
+import type { Normalized } from '../utils/normalization'
 
 interface LightStatus {
   on: boolean

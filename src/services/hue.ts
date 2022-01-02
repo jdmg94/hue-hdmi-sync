@@ -2,11 +2,11 @@ import fetch from "unfetch"
 import { Vec4 } from "opencv4nodejs"
 import { spawn } from "child_process"
 import { access, readFile, writeFile, removeFile } from "./filesystem"
+import { denormalize, Normalized } from "../utils/normalization"
 import {
   HueBridgeNetworkDevice,
   BridgeClientCredentials,
   BridgeConfig,
-  Normalized,
   LightGroup,
   Light,
 } from "../types/Hue"
@@ -93,12 +93,12 @@ export const getBridgeConfig = async (url: string): Promise<BridgeConfig> => {
 export const getBridgeGroups = async (
   url: string,
   credentials: BridgeClientCredentials
-): Promise<Normalized<LightGroup>> => {
+): Promise<Array<LightGroup>> => {
   const endpoint = `http://${url}/api/${credentials.username}/groups`
   const response = await fetch(endpoint)
   const data = await response.json()
 
-  return data
+  return denormalize(data)
 }
 
 export const getBridgeLights = async (
@@ -125,12 +125,19 @@ export const getBridgeState = async (
   return data
 }
 
-export const setGroupStreamingMode = async (
-  url: string,
-  credentials: BridgeClientCredentials,
-  groupId: number,
-  active: boolean = true
-) => {
+type StreamingModeArgs = {
+  url: string
+  credentials: BridgeClientCredentials
+  groupId: number
+  active: boolean
+}
+
+export const setGroupStreamingMode = async ({
+  url,
+  active,
+  credentials,
+  groupId,
+}: StreamingModeArgs) => {
   const body = JSON.stringify({ stream: { active } })
   const endpoint = `http://${url}/api/${credentials.username}/groups/${groupId}`
   const response = await fetch(endpoint, {
@@ -140,38 +147,58 @@ export const setGroupStreamingMode = async (
 
   const data = await response.json()
 
-  console.log("data")
+  return data
+}
+
+type SSLChannel = {
+  registerListener: (listener: (message: string) => void) => void
+  sendMessage: (message: string) => void
+  close: () => void
 }
 
 export const startSSLChannel = (
   url: string,
   credentials: BridgeClientCredentials
-) => {
-  const process = spawn("openssl", [
-    "s_client",
-    "-dtls1_2",
-    "-cipher",
-    "PSK-AES128-GCM-SHA256",
-    "-psk_identity",
-    credentials.username,
-    "-psk",
-    credentials.clientkey,
-    "-connect",
-    `${url}:2100`,
-  ])
+) =>
+  new Promise<SSLChannel>((resolve, reject) => {
+    const process = spawn("openssl", [
+      "s_client",
+      "-dtls1_2",
+      "-cipher",
+      "PSK-AES128-GCM-SHA256",
+      "-psk_identity",
+      credentials.username,
+      "-psk",
+      credentials.clientkey,
+      "-connect",
+      `${url}:2100`,
+    ])
 
-  return {
-    registerListener: (listener: (data: string) => void) => {
-      process.stdout.on("data", listener)
-    },
-    sendMessage: (message: string) => {
-      process.stdin.write(message)
-    },
-    close: () => {
-      process.kill()
-    },
-  }
-}
+    process.stdin.setDefaultEncoding("utf-8")
+
+    process.stdout.once("data", (data) => {
+      const message = data.toString()
+      if (message.includes("CONNECTED")) {
+        resolve({
+          registerListener: (listener) => {
+            process.stdout.on("message", (data: Buffer) =>
+              listener(data.toString())
+            )
+          },
+          sendMessage: (message) => {
+            process.stdin.write(Buffer.from(message))
+            process.stdin.end()
+          },
+          close: () => {
+            process.stdout.removeAllListeners()
+            process.kill()
+          },
+        })
+      } else {
+        reject(message)
+      }
+    })
+  })
 
 export const prepareBufferForStreaming = (channels: Vec4) => {
   const channeldata = [channels.x, channels.y, channels.z].map((channel) =>
