@@ -1,47 +1,27 @@
-import { exec } from "child_process"
+import path from 'path'
 import * as cv2 from "opencv4nodejs"
 
-export const getVideoSources = (): Promise<string[]> =>
-  new Promise((resolve, reject) => {
-    const sanitizeOutput = (output: string): string[] => {
-      let buffer = null
-      const result = []
-      const videoDevicesRegex = /\/dev\/video\w/g
+import sleep from '../utils/sleep'
 
-      while ((buffer = videoDevicesRegex.exec(output))) {
-        result.push(buffer[0])
-      }
+export const openVideoInput = async () => {
+  try {
+    const capture = new cv2.VideoCapture(0)
 
-      return result
-    }
+    capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+    capture.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
 
-    exec("ls -ltrh /dev/video*", (err, stdout) => {
-      if (err) {
-        reject(err)
-      } else {
-        resolve(sanitizeOutput(stdout))
-      }
-    })
-  })
-
-export const hasVideoSources = async (): Promise<boolean> => {
-  const videoSources = await getVideoSources()
-
-  return videoSources.length > 0
+    await sleep(500)
+    
+    return capture    
+  } catch {
+    return null
+  }
 }
 
-export const openVideoInput = () => {
-  try {
-    const capture = new cv2.VideoCapture(cv2.CAP_ANY)
-    capture.set(cv2.CAP_PROP_BUFFERSIZE, 0)
-
-    const frame = capture.read()
-    const channels = cv2.mean(frame)
-
-    cv2.imwrite("./testimage.jpg", frame)
-
-    capture.release()
-  } catch (err) {
-    console.log(err)
-  }
+export const getVideoWriter = (fileName: string = './test.avi'): VideoWriter => {
+  const videoSize = new cv2.Size(1280, 720)
+  const format = cv2.VideoWriter.fourcc('XVID')
+  const writer = new cv2.VideoWriter(fileName, format, 20, videoSize, true)
+	
+  return [writer, videoSize]
 }

@@ -1,31 +1,36 @@
 import Spinner from "ink-spinner"
-import { Text, render } from "ink"
+import { Text, Newline, render } from "ink"
 import React, { useEffect } from "react"
+import { Worker } from "worker_threads"
 
 import useTimeout from "../utils/useTimeout"
-import { openVideoInput, hasVideoSources } from "../services/cv"
+import { openVideoInput, getVideoWriter } from "../services/cv"
 
 const Test = () => {
-  const timeout = useTimeout(5)
+  const timeout = useTimeout(3)
 
   useEffect(() => {
-    async function init() {
-      if (await hasVideoSources()) {
-        await openVideoInput()
-      }
-    }
-
     console.clear()
-    init()
+    const worker = new Worker('./build/CVWorker')
+	
+	worker.on('message', (message) => {
+	})    
+    
+    return () => {
+      worker.terminate()
+    }
   }, [])
 
   return (
-    <Text>
-      <Text color="green">
-        <Spinner type="bouncingBall" />
+    <>
+      <Newline />
+      <Text>
+        <Text color="green">
+          <Spinner type="bouncingBall" />
+        </Text>
+        <Text>This should probably be replaced with unit tests ({timeout}s)</Text>
       </Text>
-      <Text>This should probably be replaced with unit tests ({timeout}s)</Text>
-    </Text>
+    </>
   )
 }
 
