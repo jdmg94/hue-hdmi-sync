@@ -1,7 +1,10 @@
 import { useApp } from "ink"
 import { useState, useEffect } from "react"
 
-const useTimeout = (initialTimeInSeconds: number, stepInMilis: number = 1000) => {
+const useTimeout = (
+  initialTimeInSeconds: number,
+  stepInMilis: number = 1000
+) => {
   const app = useApp()
   const [timeout, updateSeconds] = useState(initialTimeInSeconds)
 

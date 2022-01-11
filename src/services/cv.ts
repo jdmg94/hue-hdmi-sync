@@ -1,27 +1,42 @@
-import path from 'path'
-import * as cv2 from "opencv4nodejs"
+import {
+  Size,
+  VideoWriter,
+  VideoCapture,
+  CAP_ANY,
+  CAP_PROP_FRAME_WIDTH,
+  CAP_PROP_FRAME_HEIGHT,
+} from "opencv4nodejs"
 
-import sleep from '../utils/sleep'
-
-export const openVideoInput = async () => {
+import sleep from "../utils/sleep"
+// cat /sys/class/video4linux/video0/name
+export const openVideoInput = async (): Promise<
+  [VideoCapture, Size] | null
+> => {
   try {
-    const capture = new cv2.VideoCapture(0)
-
-    capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
-    capture.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
-
-    await sleep(500)
+    const videoSize = new Size(1280, 720)
+    // #NOTE: CAP_ANY doesn't work all the time 
+    // sometimes manual override 1 fixes the issue
+    // const capture = new VideoCapture(1)
+     const capture = new VideoCapture(CAP_ANY)
     
-    return capture    
+
+    capture.set(CAP_PROP_FRAME_WIDTH, videoSize.width)
+    capture.set(CAP_PROP_FRAME_HEIGHT, videoSize.height)
+
+    await sleep(1000)
+
+    return [capture, videoSize]
   } catch {
-    return null
+    return []
   }
 }
 
-export const getVideoWriter = (fileName: string = './test.avi'): VideoWriter => {
-  const videoSize = new cv2.Size(1280, 720)
-  const format = cv2.VideoWriter.fourcc('XVID')
-  const writer = new cv2.VideoWriter(fileName, format, 20, videoSize, true)
-	
-  return [writer, videoSize]
+export const getVideoWriter = (
+  fileName: string = "./test.avi",
+  videoSize: Size = new Size(1280, 720)
+): VideoWriter => {
+  const format = VideoWriter.fourcc("MJPG")
+  const writer = new VideoWriter(fileName, format, 20, videoSize, true)
+
+  return writer
 }

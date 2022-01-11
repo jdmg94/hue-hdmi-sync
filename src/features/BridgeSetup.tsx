@@ -3,14 +3,20 @@ import Spinner from "ink-spinner"
 import { useNavigate } from "react-router"
 import React, { useEffect, useState } from "react"
 
-import { BridgeClientCredentials } from "../types/Hue"
+import HueBridge, { 
+  BridgeClientCredentials,
+} from "hue-sync"
+
 import { Status, StatusType } from "../types/Status"
-import { useBridgeContext, SET_CREDENTIALS } from "../context/hueBridge"
 import {
-  getRegisteredCredentials,
-  requestAppRegisterOnBridge,
   persistNewCredentials,
-} from "../services/hue"
+  getRegisteredCredentials
+} from "../utils/credentialHelpers"
+import {
+  useBridgeContext,
+  SET_CREDENTIALS,
+  SET_BRIDGE_DEVICE,
+} from "../context/hueBridge"
 
 const isChristmas = () => {
   const today = new Date()
@@ -26,7 +32,14 @@ const BridgeConfig = () => {
     dispatch,
     state: { bridgeNetworkDevice },
   } = useBridgeContext()
-  const submitCredentials = (credentials: BridgeClientCredentials) => {
+  const submitCredentials = async (credentials: BridgeClientCredentials) => {
+    await persistNewCredentials(credentials)
+    const bridge = new HueBridge({
+      credentials,
+      url: bridgeNetworkDevice.internalipaddress,
+    })
+
+    dispatch({ payload: bridge, type: SET_BRIDGE_DEVICE })
     dispatch({ payload: credentials, type: SET_CREDENTIALS })
     navigate("/entertainment-groups")
   }
@@ -48,10 +61,9 @@ const BridgeConfig = () => {
   useEffect(() => {
     if (needsCredentials) {
       const interval = setInterval(() => {
-        requestAppRegisterOnBridge(bridgeNetworkDevice.internalipaddress)
-          .then(async (response) => {
+        HueBridge.register(bridgeNetworkDevice.ip)
+          .then((response) => {
             clearInterval(interval)
-            await persistNewCredentials(response)
             submitCredentials(response)
           })
           .catch(() => {})

@@ -1,19 +1,21 @@
 import React, { createContext, FC, useContext, useReducer } from "react"
 import {
   HueBridgeNetworkDevice,
-  LightGroup,
   BridgeConfig,
   BridgeClientCredentials,
 } from "../types/Hue"
+import { EntertainmentArea } from "../services/hue/hue.types"
 
 export interface BridgeState {
+  bridge: any
   bridgeConfig?: BridgeConfig
   credentials?: BridgeClientCredentials
   bridgeNetworkDevice?: HueBridgeNetworkDevice
-  entertainmentGroup?: LightGroup
+  entertainmentGroup?: EntertainmentArea
 }
 
 const initialState: BridgeState = {
+  bridge: null,
   credentials: null,
   bridgeConfig: null,
   bridgeNetworkDevice: null,
@@ -29,6 +31,7 @@ export const SET_BRIDGE = "SET_BRIDGE"
 export const SET_CREDENTIALS = "SET_CREDENTIALS"
 export const SET_lIGHT_GROUP = "SET_lIGHT_GROUP"
 export const SET_BRIDGE_CONFIG = "SET_BRIDGE_CONFIG"
+export const SET_BRIDGE_DEVICE = "SET_BRIDGE_DEVICE"
 
 const reducer = (
   state: BridgeState = initialState,
@@ -44,7 +47,7 @@ const reducer = (
       }
     },
     [SET_lIGHT_GROUP]: () => {
-      const { payload } = action as Action<LightGroup>
+      const { payload } = action as Action<EntertainmentArea>
 
       return {
         ...state,
@@ -57,6 +60,14 @@ const reducer = (
       return {
         ...state,
         bridgeNetworkDevice: payload,
+      }
+    },
+    [SET_BRIDGE_DEVICE]: () => {
+      const { payload } = action
+
+      return {
+        ...state,
+        bridge: payload,
       }
     },
     [SET_BRIDGE_CONFIG]: () => {
@@ -74,7 +85,7 @@ const reducer = (
 
 const BridgeDataContext = createContext(null)
 
-export const BridgeDataProvider: FC = ({ children }) => {
+export const BridgeProvider: FC = ({ children }) => {
   const [state, dispatch] = useReducer(reducer, initialState)
 
   return (

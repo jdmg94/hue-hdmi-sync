@@ -1,12 +1,12 @@
-import { Text } from "ink"
+import { Text, useApp } from "ink"
 import Spinner from "ink-spinner"
 import SelectInput from "ink-select-input"
 import { useNavigate } from "react-router"
 import React, { useEffect, useState } from "react"
+import HueBridge, { HueBridgeNetworkDevice } from "hue-sync"
 
 import { StatusType, Status } from "../types/Status"
-import { HueBridgeNetworkDevice } from "../types/Hue"
-import { getBridgeConfig, discoverHueBridges } from "../services/hue"
+
 import {
   useBridgeContext,
   SET_BRIDGE,
@@ -16,6 +16,7 @@ import {
 const MIN_HUE_API_VERSION = 1.22
 
 const DiscoverBridges = () => {
+  const app = useApp()
   const navigate = useNavigate()
   const { dispatch } = useBridgeContext()
   const [status, updateStatus] = useState<StatusType>(Status.IDLE)
@@ -24,7 +25,7 @@ const DiscoverBridges = () => {
     "Something went wrong, please try again later"
   )
   const submitBridgeSelection = async (bridge: HueBridgeNetworkDevice) => {
-    const config = await getBridgeConfig(bridge.internalipaddress)
+    const config = await HueBridge.getInfo(bridge.internalipaddress)
     const currentAPIVersion = Number.parseFloat(config.apiversion)
 
     if (currentAPIVersion > MIN_HUE_API_VERSION) {
@@ -43,7 +44,7 @@ const DiscoverBridges = () => {
     async function yahoo() {
       try {
         updateStatus(Status.LOADING)
-        const buffer = await discoverHueBridges()
+        const buffer = await HueBridge.discover()
 
         if (buffer?.length === 1) {
           submitBridgeSelection(buffer[0])
@@ -51,8 +52,12 @@ const DiscoverBridges = () => {
           setBridges(buffer)
           updateStatus(Status.DONE)
         }
-      } catch {
+      } catch (err) {
+        console.log(err)
         updateStatus(Status.ERROR)
+        setTimeout(() => {
+          app.exit()
+        }, 500)
       }
     }
 
@@ -89,7 +94,7 @@ const DiscoverBridges = () => {
         onSelect={(item) => submitBridgeSelection(item.value)}
         items={bridges.map((item) => ({
           value: item,
-          label: `${item.id}@${item.internalipaddress}`,
+          label: `${item.id}@${item.ip}`,
         }))}
       />
     </>
