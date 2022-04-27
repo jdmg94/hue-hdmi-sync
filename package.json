@@ -1,6 +1,6 @@
 {
   "name": "hue-hmdi-sync",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "A Node.js CLI tool that uses OpenCV to match video input to Phillips Hue Entertainment API",
   "main": "build/index.js",
   "scripts": {
