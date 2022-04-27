@@ -3,7 +3,6 @@ import { Worker } from "worker_threads"
 import React, { useEffect } from "react"
 import { Text, useInput, useApp } from "ink"
 
-import sleep from '../utils/sleep'
 import { useBridgeContext } from "../context/hueBridge"
 
 const worker = new Worker("./build/CVWorker")

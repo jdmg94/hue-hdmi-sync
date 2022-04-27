@@ -1,13 +1,20 @@
-import React, { createContext, FC, useContext, useReducer } from "react"
-import {
-  HueBridgeNetworkDevice,
+import { AnyAction, createSlice, PayloadAction } from "@reduxjs/toolkit"
+import React, {
+  createContext,
+  FC,
+  useContext,
+  useReducer,
+  ReactElement,
+} from "react"
+import HueSync, {
   BridgeConfig,
+  EntertainmentArea,
+  HueBridgeNetworkDevice,
   BridgeClientCredentials,
-} from "../types/Hue"
-import { EntertainmentArea } from "../services/hue/hue.types"
+} from "hue-sync"
 
 export interface BridgeState {
-  bridge: any
+  bridge: HueSync
   bridgeConfig?: BridgeConfig
   credentials?: BridgeClientCredentials
   bridgeNetworkDevice?: HueBridgeNetworkDevice
@@ -22,70 +29,31 @@ const initialState: BridgeState = {
   entertainmentGroup: null,
 }
 
-type Action<T = {}> = {
-  payload?: T
-  type: string
-}
-
-export const SET_BRIDGE = "SET_BRIDGE"
-export const SET_CREDENTIALS = "SET_CREDENTIALS"
-export const SET_lIGHT_GROUP = "SET_lIGHT_GROUP"
-export const SET_BRIDGE_CONFIG = "SET_BRIDGE_CONFIG"
-export const SET_BRIDGE_DEVICE = "SET_BRIDGE_DEVICE"
-
-const reducer = (
-  state: BridgeState = initialState,
-  action: Action
-): BridgeState => {
-  const nextState = {
-    [SET_CREDENTIALS]: () => {
-      const { payload } = action as Action<BridgeClientCredentials>
-
-      return {
-        ...state,
-        credentials: payload,
-      }
+const stateSlice = createSlice({
+  name: "hueBridge",
+  initialState,
+  reducers: {
+    setBridge: (state, action: PayloadAction<HueSync>) => {
+      state.bridge = action.payload
     },
-    [SET_lIGHT_GROUP]: () => {
-      const { payload } = action as Action<EntertainmentArea>
-
-      return {
-        ...state,
-        entertainmentGroup: payload,
-      }
+    setCredentials: (state, action: PayloadAction<BridgeClientCredentials>) => {
+      state.credentials = action.payload
     },
-    [SET_BRIDGE]: () => {
-      const { payload } = action as Action<HueBridgeNetworkDevice>
-
-      return {
-        ...state,
-        bridgeNetworkDevice: payload,
-      }
+    setLightGroup: (state, action: PayloadAction<EntertainmentArea>) => {
+      state.entertainmentGroup = action.payload
     },
-    [SET_BRIDGE_DEVICE]: () => {
-      const { payload } = action
-
-      return {
-        ...state,
-        bridge: payload,
-      }
+    setBridgeDevice: (state, action: PayloadAction<HueBridgeNetworkDevice>) => {
+      state.bridgeNetworkDevice = action.payload
     },
-    [SET_BRIDGE_CONFIG]: () => {
-      const { payload } = action as Action<BridgeConfig>
-
-      return {
-        ...state,
-        bridgeConfig: payload,
-      }
-    },
-  }[action.type]
-
-  return nextState?.() || state
-}
+  },
+})
 
 const BridgeDataContext = createContext(null)
 
-export const BridgeProvider: FC = ({ children }) => {
+export const BridgeProvider: FC<{
+  children: ReactElement
+}> = ({ children }) => {
+  const { reducer } = stateSlice
   const [state, dispatch] = useReducer(reducer, initialState)
 
   return (
@@ -95,4 +63,22 @@ export const BridgeProvider: FC = ({ children }) => {
   )
 }
 
-export const useBridgeContext = () => useContext(BridgeDataContext)
+type BridgeContextApi = {
+  state: BridgeState
+  dispatch: React.Dispatch<AnyAction>
+}
+
+export const useBridgeContext = () => {
+  const context: BridgeContextApi = useContext(BridgeDataContext)
+
+  if (!context) {
+    throw new Error(
+      "Bridge Context can only be used within Bridge state provider"
+    )
+  }
+
+  return context
+}
+
+export const { setBridge, setCredentials, setLightGroup, setBridgeDevice } =
+  stateSlice.actions

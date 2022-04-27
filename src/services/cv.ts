@@ -10,7 +10,7 @@ import {
 import sleep from "../utils/sleep"
 // cat /sys/class/video4linux/video0/name
 export const openVideoInput = async (): Promise<
-  [VideoCapture, Size] | null
+  [VideoCapture, Size] | Array<{}>
 > => {
   try {
     const videoSize = new Size(1280, 720)

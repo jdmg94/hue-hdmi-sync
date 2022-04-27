@@ -1,5 +1,5 @@
 import { BridgeClientCredentials } from "hue-sync";
-import { access, readFile, writeFile, removeFile } from "../services/filesystem";
+import { access, readFile, writeFile, rm as removeFile } from "fs/promises";
 
 const BridgeClientCredentialsPath = "./client.json";
 
