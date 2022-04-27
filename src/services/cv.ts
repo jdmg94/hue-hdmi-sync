@@ -1,47 +1,42 @@
-import { exec } from "child_process"
-import * as cv2 from "opencv4nodejs"
+import {
+  Size,
+  VideoWriter,
+  VideoCapture,
+  CAP_ANY,
+  CAP_PROP_FRAME_WIDTH,
+  CAP_PROP_FRAME_HEIGHT,
+} from "opencv4nodejs"
 
-export const getVideoSources = (): Promise<string[]> =>
-  new Promise((resolve, reject) => {
-    const sanitizeOutput = (output: string): string[] => {
-      let buffer = null
-      const result = []
-      const videoDevicesRegex = /\/dev\/video\w/g
+import sleep from "../utils/sleep"
+// cat /sys/class/video4linux/video0/name
+export const openVideoInput = async (): Promise<
+  [VideoCapture, Size] | Array<{}>
+> => {
+  try {
+    const videoSize = new Size(1280, 720)
+    // #NOTE: CAP_ANY doesn't work all the time 
+    // sometimes manual override 1 fixes the issue
+    // const capture = new VideoCapture(1)
+     const capture = new VideoCapture(CAP_ANY)
+    
 
-      while ((buffer = videoDevicesRegex.exec(output))) {
-        result.push(buffer[0])
-      }
+    capture.set(CAP_PROP_FRAME_WIDTH, videoSize.width)
+    capture.set(CAP_PROP_FRAME_HEIGHT, videoSize.height)
 
-      return result
-    }
+    await sleep(1000)
 
-    exec("ls -ltrh /dev/video*", (err, stdout) => {
-      if (err) {
-        reject(err)
-      } else {
-        resolve(sanitizeOutput(stdout))
-      }
-    })
-  })
-
-export const hasVideoSources = async (): Promise<boolean> => {
-  const videoSources = await getVideoSources()
-
-  return videoSources.length > 0
+    return [capture, videoSize]
+  } catch {
+    return []
+  }
 }
 
-export const openVideoInput = () => {
-  try {
-    const capture = new cv2.VideoCapture(cv2.CAP_ANY)
-    capture.set(cv2.CAP_PROP_BUFFERSIZE, 0)
+export const getVideoWriter = (
+  fileName: string = "./test.avi",
+  videoSize: Size = new Size(1280, 720)
+): VideoWriter => {
+  const format = VideoWriter.fourcc("MJPG")
+  const writer = new VideoWriter(fileName, format, 20, videoSize, true)
 
-    const frame = capture.read()
-    const channels = cv2.mean(frame)
-
-    cv2.imwrite("./testimage.jpg", frame)
-
-    capture.release()
-  } catch (err) {
-    console.log(err)
-  }
+  return writer
 }

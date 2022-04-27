@@ -2,27 +2,25 @@ import React from "react"
 import { MemoryRouter, Routes, Route } from "react-router"
 
 import Header from "./components/Header"
-import DetectVideoSources from "./features/DetectVideoSources"
-import BridgeConfig from "./features/BridgeConfig"
-import LightsConfig from "./features/LightsConfig"
-import { BridgeDataProvider } from "./context/hueBridge"
-import DiscoverBridges from "./features/DiscoverBridges"
-import EntertainmentGroups from "./features/EntertainmentGroups"
+import { BridgeProvider } from "./context/hueBridge"
+import BridgeHandShake from "./features/BridgeHandShake"
+import RGBLightStreamer from "./features/LightsStreamer"
+import BridgeDiscovery from "./features/BridgeDiscovery"
+import EntertainmentAreas from "./features/EntertainmentAreaSelection"
 
 const App = () => (
   <>
     <Header />
-    <BridgeDataProvider>
+    <BridgeProvider>
       <MemoryRouter>
         <Routes>
-          <Route path="/" element={<DetectVideoSources />} />
-          <Route path="/discovery" element={<DiscoverBridges />} />
-          <Route path="/bridge-setup" element={<BridgeConfig />} />
-          <Route path="/entertainment-groups" element={<EntertainmentGroups />} />
-          <Route path="/lights" element={<LightsConfig />} />
+          <Route path="/" element={<BridgeDiscovery />} />
+          <Route path="/bridge-handshake" element={<BridgeHandShake />} />
+          <Route path="/entertainment-areas" element={<EntertainmentAreas />} />
+          <Route path="/rgb-stream" element={<RGBLightStreamer />} />
         </Routes>
       </MemoryRouter>
-    </BridgeDataProvider>
+    </BridgeProvider>
   </>
 )
 

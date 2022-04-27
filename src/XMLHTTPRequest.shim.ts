@@ -1,3 +1,3 @@
 if (!("XMLHttpRequest" in global)) {
-  global.XMLHttpRequest = require('xhr2');
+  global.XMLHttpRequest = require("xhr2")
 }
