@@ -1,8 +1,16 @@
-import { Rect, Size } from "opencv4nodejs"
 import { parentPort } from "worker_threads"
+import {
+  Rect,
+  Size,
+  VideoCapture,
+  CAP_ANY,
+  CAP_PROP_FRAME_WIDTH,
+  CAP_PROP_FRAME_HEIGHT,
+} from "opencv4nodejs"
 
-import { openVideoInput } from "./services/cv"
+import sleep from "./utils/sleep"
 
+let videoInput = CAP_ANY
 const bgr2rgb = ({ y, x, w }) => [y, x, w].map(Math.floor)
 const isBlank = (buffer: number[][]) =>
   buffer.flatMap((item) => item).reduce((sum, item) => sum + item, 0) === 0
@@ -36,37 +44,47 @@ const splitIntoLightstripGradientRegions = (size: Size): Rect[] => {
 }
 
 const processVideo = async () => {
-  let shouldRun = true
-  const [capture, size] = await openVideoInput()
-  
-  if(!capture) {
-    parentPort.postMessage("error: Could not open video capture device")
-    return
-  }
+  try {
+    let shouldRun = true
+    const size = new Size(1280, 720)
+    const capture = new VideoCapture(videoInput)
 
-  parentPort.once("message", (message) => {
-    if (message === "stop") {
-      shouldRun = false
-      capture.release()
+    sleep(1000)
+
+    if (!capture) {
+      parentPort.postMessage("error: Could not open video capture device")
+      return
     }
-  })
 
-  const regions = splitIntoLightstripGradientRegions(size)
+    capture.set(CAP_PROP_FRAME_WIDTH, size.width)
+    capture.set(CAP_PROP_FRAME_HEIGHT, size.height)
 
-  while (shouldRun) {
-    const frame = capture.read()
-    if (!frame?.empty) {
-      const buffer = regions.map((rect) =>
-        bgr2rgb(frame.getRegion(rect).mean())
-      )
+    parentPort.once("message", (message) => {
+      if (message === "stop") {
+        shouldRun = false
+        capture.release()
+      }
+    })
 
-      // #NOTE: prevents flickering
-      if (!isBlank(buffer)) {
-        const payload = JSON.stringify(buffer)
+    const regions = splitIntoLightstripGradientRegions(size)
 
-        parentPort.postMessage(payload)
+    while (shouldRun) {
+      const frame = capture.read()
+      if (!frame?.empty) {
+        const buffer = regions.map((rect) =>
+          bgr2rgb(frame.getRegion(rect).mean())
+        )
+
+        // #NOTE: prevents flickering
+        if (!isBlank(buffer)) {
+          const payload = JSON.stringify(buffer)
+
+          parentPort.postMessage(payload)
+        }
       }
     }
+  } catch {
+    parentPort.postMessage("error: Could not open video capture device")
   }
 }
 

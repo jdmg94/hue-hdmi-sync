@@ -17,6 +17,7 @@ const LightsStreaming = () => {
     if (input === "q") {
       worker.postMessage("stop")
       app.exit()
+      process.exit(0)
     }
   })
 
@@ -38,9 +39,12 @@ const LightsStreaming = () => {
     init()
 
     return () => {
-      bridge.stop().then(() => {
-        worker.terminate()
-      })
+      bridge
+        .stop()
+        .catch(() => {})
+        .finally(() => {
+          worker.terminate()
+        })
     }
   }, [])
 

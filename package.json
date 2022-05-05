@@ -5,11 +5,9 @@
   "main": "build/index.js",
   "scripts": {
     "start": "node build/index.js",
-    "build": "npm run clean && swc src -d build --ignore */**/*.spec.*",
+    "build": "npm run clean && swc src -d build",
     "dev": "npm run build && npm start",
     "lint": "prettier src -w",
-    "list-video-devices": "ls -ltrh /dev/video*",
-    "debug": "npm run build && node build/features/Debug.js",
     "clean": "rm -rf build && mkdir build"
   },
   "author": "Jose Munoz",
@@ -24,7 +22,7 @@
     "ink-spinner": "^4.0.3",
     "opencv-build": "^0.1.9",
     "opencv4nodejs": "^5.6.0",
-    "react": "^18.1.0",
+    "react": "^17.0.2",
     "react-router": "^6.3.0",
     "regenerator-runtime": "^0.13.9",
     "xhr2": "^0.2.1"
@@ -37,7 +35,6 @@
     "@swc/jest": "^0.2.20",
     "@types/jest": "^27.4.1",
     "@types/react": "^18.0.8",
-    "chokidar": "^3.5.3",
     "ink-testing-library": "^2.1.0",
     "jest": "^28.0.1",
     "prettier": "^2.6.2"
