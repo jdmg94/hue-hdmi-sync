@@ -19,8 +19,17 @@ export enum ExtraStates {
 }
 
 type StatusType = STATUS | ExtraStates
+type BridgeHandShakeArgs = {
+  poll?: number
+  timeout?: number
+}
 
-const useBridgeHandShake = () => {
+const handShakeDefaults = {
+  poll: 3000,
+  timeout: 30000,
+}
+
+const useBridgeHandShake = ({ poll, timeout}: BridgeHandShakeArgs = handShakeDefaults) => {
   const navigate = useNavigate()
   const [status, updateStatus] = useState<StatusType>(STATUS.IDLE)
   const {
@@ -54,7 +63,7 @@ const useBridgeHandShake = () => {
   }, [])
 
   useEffect(() => {
-    let timeout = null
+    let timeoutRef = null
     if (status === ExtraStates.NEEDS_CREDENTIALS) {
       const interval = setInterval(() => {
         HueSync.register(bridgeNetworkDevice.internalipaddress)
@@ -63,17 +72,17 @@ const useBridgeHandShake = () => {
             submitCredentials(response)
           })
           .catch(() => {})
-      }, 3000) // #NOTE: check every 3 seconds
+      }, poll)
 
-      timeout = setTimeout(() => {
+      timeoutRef = setTimeout(() => {
         clearInterval(interval)
         updateStatus(STATUS.ERROR)
-      }, 30000) // #NOTE: timeout at 30 seconds
+      }, timeout)
     }
 
     return () => {
-      if (timeout) {
-        clearTimeout(timeout)
+      if (timeoutRef) {
+        clearTimeout(timeoutRef)
       }
     }
   }, [status])

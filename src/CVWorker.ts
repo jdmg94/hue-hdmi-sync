@@ -3,18 +3,18 @@ import {
   Rect,
   Size,
   VideoCapture,
-  CAP_ANY,
+  CAP_V4L,
+  CAP_PROP_FPS,
+  CAP_PROP_CONVERT_RGB,
   CAP_PROP_FRAME_WIDTH,
   CAP_PROP_FRAME_HEIGHT,
 } from "opencv4nodejs"
 
 import sleep from "./utils/sleep"
 
-let videoInput = CAP_ANY
-const bgr2rgb = ({ y, x, w }) => [y, x, w].map(Math.floor)
-const isBlank = (buffer: number[][]) =>
-  buffer.flatMap((item) => item).reduce((sum, item) => sum + item, 0) === 0
-
+let videoInput = CAP_V4L
+// const bgr2rgb = ({ y, x, w }) => [y, x, w].map(Math.floor)
+const bgr2rgb = ({ y, x, w }) => [w, x, y].map(Math.floor)
 const splitIntoLightstripGradientRegions = (size: Size): Rect[] => {
   const halfHeight = Math.floor(size.height / 2)
   const oneThirdWidth = Math.floor(size.width / 3)
@@ -55,7 +55,8 @@ const processVideo = async () => {
       parentPort.postMessage("error: Could not open video capture device")
       return
     }
-
+    capture.set(CAP_PROP_FPS, 30)
+    capture.set(CAP_PROP_CONVERT_RGB, 1)
     capture.set(CAP_PROP_FRAME_WIDTH, size.width)
     capture.set(CAP_PROP_FRAME_HEIGHT, size.height)
 
@@ -71,16 +72,14 @@ const processVideo = async () => {
     while (shouldRun) {
       const frame = capture.read()
       if (!frame?.empty) {
+        
+
+
         const buffer = regions.map((rect) =>
           bgr2rgb(frame.getRegion(rect).mean())
         )
 
-        // #NOTE: prevents flickering
-        if (!isBlank(buffer)) {
-          const payload = JSON.stringify(buffer)
-
-          parentPort.postMessage(payload)
-        }
+        parentPort.postMessage(JSON.stringify(buffer))
       }
     }
   } catch {

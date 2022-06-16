@@ -5,12 +5,6 @@ import Spinner from "ink-spinner"
 import { STATUS } from "../../types/Status"
 import useBridgeHandShake, { ExtraStates } from "./useBridgeHandShake"
 
-const isChristmas = () => {
-  const today = new Date()
-
-  return today.getMonth() === 11 && today.getDate() === 25
-}
-
 const BridgeConfig = () => {
   const { status } = useBridgeHandShake()
 
@@ -22,9 +16,8 @@ const BridgeConfig = () => {
   return (
     <Text>
       <Text color="green">
-        <Spinner type={isChristmas() ? "christmas" : "dots"} />
+        <Spinner type="dots" />
       </Text>
-      <Text> </Text>
       <Text>
         {status === ExtraStates.NEEDS_CREDENTIALS
           ? "Checking "
