@@ -13,17 +13,13 @@ import {
 import sleep from "./utils/sleep"
 
 let videoInput = CAP_V4L
-// const bgr2rgb = ({ y, x, w }) => [y, x, w].map(Math.floor)
-const bgr2rgb = ({ y, x, w }) => [w, x, y].map(Math.floor)
+const bgr2rgb = ({ y, x, w }) => [y, x, w]
 const splitIntoLightstripGradientRegions = (size: Size): Rect[] => {
   const halfHeight = Math.floor(size.height / 2)
   const oneThirdWidth = Math.floor(size.width / 3)
-
   const firstQuarter = new Rect(0, halfHeight, oneThirdWidth, halfHeight)
   const secondQuarter = new Rect(0, 0, oneThirdWidth, halfHeight)
-
   const oneThird = new Rect(oneThirdWidth, 0, oneThirdWidth, halfHeight)
-
   const thirdQuarter = new Rect(oneThirdWidth * 2, 0, oneThirdWidth, halfHeight)
   const fourthQuarter = new Rect(
     oneThirdWidth * 2,
@@ -48,6 +44,7 @@ const processVideo = async () => {
     let shouldRun = true
     const size = new Size(1280, 720)
     const capture = new VideoCapture(videoInput)
+    const regions = splitIntoLightstripGradientRegions(size)
 
     sleep(1000)
 
@@ -65,21 +62,16 @@ const processVideo = async () => {
         shouldRun = false
         capture.release()
       }
-    })
-
-    const regions = splitIntoLightstripGradientRegions(size)
+    })    
 
     while (shouldRun) {
       const frame = capture.read()
       if (!frame?.empty) {
-        
-
-
         const buffer = regions.map((rect) =>
-          bgr2rgb(frame.getRegion(rect).mean())
+          Uint32Array.from(bgr2rgb(frame.getRegion(rect).mean()))
         )
 
-        parentPort.postMessage(JSON.stringify(buffer))
+        parentPort.postMessage(buffer, buffer)
       }
     }
   } catch {

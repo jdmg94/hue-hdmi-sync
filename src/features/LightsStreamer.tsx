@@ -9,43 +9,34 @@ const worker = new Worker("./build/CVWorker")
 
 const LightsStreaming = () => {
   const app = useApp()
-  const {
-    state: { bridge, entertainmentGroup },
-  } = useBridgeContext()
+  const { state } = useBridgeContext()
+  const { bridge, entertainmentGroup } = state!
 
   useInput((input) => {
     if (input === "q") {
       worker.postMessage("stop")
-      app.exit()
-      process.exit(0)
+      bridge!.stop().then(() => {
+        worker.terminate()
+        app.exit()
+      })
     }
   })
 
   useEffect(() => {
     async function init() {
-      await bridge.start(entertainmentGroup.id)
+      await bridge!.start(entertainmentGroup!.id)
 
       worker.postMessage("start")
       worker.on("message", (message) => {
-        const buffer = message.toString()
         try {
-          const gradientData = JSON.parse(buffer)
-
-          bridge.transition(gradientData)
+          bridge!.transition(
+            message as unknown as Array<[number, number, number]>
+          )
         } catch {} // ignore exit error
       })
     }
 
     init()
-
-    return () => {
-      bridge
-        .stop()
-        .catch(() => {})
-        .finally(() => {
-          worker.terminate()
-        })
-    }
   }, [])
 
   return (
