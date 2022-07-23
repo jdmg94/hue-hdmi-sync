@@ -40,6 +40,7 @@ const useBridgeHandShake = ({ poll, timeout}: BridgeHandShakeArgs = handShakeDef
     await persistNewCredentials(credentials)
     const bridge = new HueSync({
       credentials,
+      id: bridgeNetworkDevice.id,
       url: bridgeNetworkDevice.internalipaddress,
     })
 

@@ -15,10 +15,9 @@ const LightsStreaming = () => {
   useInput((input) => {
     if (input === "q") {
       worker.postMessage("stop")
-      bridge!.stop().then(() => {
-        worker.terminate()
-        app.exit()
-      })
+      bridge!.stop()
+      app.exit()
+      process.exit(0)
     }
   })
 
@@ -30,7 +29,7 @@ const LightsStreaming = () => {
       worker.on("message", (message) => {
         try {
           bridge!.transition(
-            message as unknown as Array<[number, number, number]>
+            JSON.parse(message) as unknown as Array<[number, number, number]>
           )
         } catch {} // ignore exit error
       })

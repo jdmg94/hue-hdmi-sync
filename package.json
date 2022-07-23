@@ -3,18 +3,21 @@
   "version": "1.1.0",
   "description": "A Node.js CLI tool that uses OpenCV to match video input to Phillips Hue Entertainment API",
   "main": "build/index.js",
+  "bin": "build/index.js",
   "scripts": {
-    "start": "node build/index.js",
-    "build": "npm run clean && swc src -d build",
-    "dev": "npm run build && npm start",
+    "start": "NODE_TLS_REJECT_UNAUTHORIZED=0 node build/index.js",
+    "start:prod": "NODE_NO_WARNINGS=1 NODE_EXTRA_CA_CERTS=node_modules/hue-sync/signify.pem node build/index.js",
     "lint": "prettier src -w",
-    "clean": "rm -rf build && mkdir build"
+    "build": "swc src -d build",
+    "clean": "rm -rf build && mkdir build",
+    "dev": "npm run clean && npm run build && npm start",
+    "prod": "npm run clean && npm run build && npm start:prod"
   },
   "author": "Jose Munoz",
   "license": "ISC",
   "dependencies": {
     "@reduxjs/toolkit": "^1.8.1",
-    "hue-sync": "^0.0.5",
+    "hue-sync": "^0.0.8",
     "ink": "^3.2.0",
     "ink-big-text": "^1.2.0",
     "ink-gradient": "^2.0.0",
@@ -25,15 +28,12 @@
     "opencv4nodejs": "^5.6.0",
     "react": "^17.0.2",
     "react-router": "^6.3.0",
-    "regenerator-runtime": "^0.13.9",
-    "xhr2": "^0.2.1"
+    "regenerator-runtime": "^0.13.9"
   },
   "devDependencies": {
     "@swc-node/core": "^1.8.2",
     "@swc-node/jest": "^1.4.3",
     "@swc/cli": "^0.1.57",
-    "@swc/core": "^1.2.172",
-    "@swc/jest": "^0.2.20",
     "@types/jest": "^27.4.1",
     "@types/react": "^18.0.8",
     "ink-testing-library": "^2.1.0",

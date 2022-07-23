@@ -68,10 +68,10 @@ const processVideo = async () => {
       const frame = capture.read()
       if (!frame?.empty) {
         const buffer = regions.map((rect) =>
-          Uint32Array.from(bgr2rgb(frame.getRegion(rect).mean()))
+          bgr2rgb(frame.getRegion(rect).mean())
         )
 
-        parentPort.postMessage(buffer, buffer)
+        parentPort.postMessage(JSON.stringify(buffer))
       }
     }
   } catch {
