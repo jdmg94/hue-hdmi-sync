@@ -11,13 +11,14 @@
     "build": "swc src -d build",
     "clean": "rm -rf build && mkdir build",
     "dev": "npm run clean && npm run build && npm start",
-    "prod": "npm run clean && npm run build && npm start:prod"
+    "prod": "npm run clean && npm run build && npm start:prod",
+    "publish": "npm run clean && npm run transpile && npm publish"
   },
   "author": "Jose Munoz",
   "license": "ISC",
   "dependencies": {
     "@reduxjs/toolkit": "^1.8.1",
-    "hue-sync": "^0.0.8",
+    "hue-sync": "^0.1.2",
     "ink": "^3.2.0",
     "ink-big-text": "^1.2.0",
     "ink-gradient": "^2.0.0",

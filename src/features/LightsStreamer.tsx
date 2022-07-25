@@ -23,7 +23,7 @@ const LightsStreaming = () => {
 
   useEffect(() => {
     async function init() {
-      await bridge!.start(entertainmentGroup!.id)
+      await bridge!.start(entertainmentGroup!)
 
       worker.postMessage("start")
       worker.on("message", (message) => {
