@@ -18,7 +18,7 @@
   "license": "ISC",
   "dependencies": {
     "@reduxjs/toolkit": "^1.8.1",
-    "hue-sync": "^0.1.2",
+    "hue-sync": "^0.1.1",
     "ink": "^3.2.0",
     "ink-big-text": "^1.2.0",
     "ink-gradient": "^2.0.0",
@@ -42,7 +42,7 @@
     "prettier": "^2.6.2"
   },
   "opencv4nodejs": {
-    "autoBuildOpencvVersion": "4.5.4",
+    "autoBuildOpencvVersion": "4.6.0",
     "autoBuildWithoutContrib": true
   }
 }

@@ -12,8 +12,7 @@ import {
 
 import sleep from "./utils/sleep"
 
-let videoInput = CAP_V4L
-const bgr2rgb = ({ y, x, w }) => [y, x, w]
+const bgr2rgb = ({ y, x, w }): number[] => [y, x, w]
 const splitIntoLightstripGradientRegions = (size: Size): Rect[] => {
   const halfHeight = Math.floor(size.height / 2)
   const oneThirdWidth = Math.floor(size.width / 3)
@@ -40,42 +39,43 @@ const splitIntoLightstripGradientRegions = (size: Size): Rect[] => {
 }
 
 const processVideo = async () => {
+  let shouldRun = true
+  const size = new Size(1280, 720)
+  const capture = new VideoCapture(CAP_V4L)
+
+  sleep(1000)
+
+  if (!capture) {
+    parentPort.postMessage("error: Could not open video capture device")
+    return
+  }
   try {
-    let shouldRun = true
-    const size = new Size(1280, 720)
-    const capture = new VideoCapture(videoInput)
-    const regions = splitIntoLightstripGradientRegions(size)
-
-    sleep(1000)
-
-    if (!capture) {
-      parentPort.postMessage("error: Could not open video capture device")
-      return
-    }
     capture.set(CAP_PROP_FPS, 30)
     capture.set(CAP_PROP_CONVERT_RGB, 1)
     capture.set(CAP_PROP_FRAME_WIDTH, size.width)
     capture.set(CAP_PROP_FRAME_HEIGHT, size.height)
+    const regions = splitIntoLightstripGradientRegions(size)
 
     parentPort.once("message", (message) => {
       if (message === "stop") {
         shouldRun = false
         capture.release()
       }
-    })    
+    })
 
     while (shouldRun) {
       const frame = capture.read()
       if (!frame?.empty) {
-        const buffer = regions.map((rect) =>
-          bgr2rgb(frame.getRegion(rect).mean())
+        const buffer = regions.flatMap((area) =>
+          bgr2rgb(frame.getRegion(area).mean())
         )
+        const value = new Uint32Array(buffer).buffer
 
-        parentPort.postMessage(JSON.stringify(buffer))
+        parentPort.postMessage({ value }, [value])
       }
     }
-  } catch {
-    parentPort.postMessage("error: Could not open video capture device")
+  } catch (error) {    
+    parentPort.postMessage(error.message)
   }
 }
 
