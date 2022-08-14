@@ -3,28 +3,10 @@ import { Worker } from "worker_threads"
 import React, { useEffect } from "react"
 import { Text, useInput, useApp } from "ink"
 
+import chunk from "../utils/chunk"
 import { useBridgeContext } from "../context/hueBridge"
 
 const worker = new Worker("./build/CVWorker")
-
-const bufferToRGB = (data: { value: Buffer }) => {
-  let counter = 0
-  let chunk: Array<number> = []
-  const buffer = new Uint32Array(data.value)
-  const result: Array<[number, number, number]> = []
-
-  for (let value of buffer) {
-    counter++
-    chunk.push(value)
-
-    if (counter === 3) {
-      result.push(chunk as [number, number, number])
-      chunk = []
-      counter = 0
-    }
-  }
-  return result
-}
 
 const LightsStreaming = () => {
   const app = useApp()
@@ -46,9 +28,9 @@ const LightsStreaming = () => {
 
       worker.postMessage("start")
       worker.on("message", (message) => {
-        const colorData = bufferToRGB(message)
+        const colorData = chunk<number>(message.value, 3)
 
-        bridge!.transition(colorData)
+        bridge!.transition(colorData as Array<[number, number, number]>)
       })
     }
 
