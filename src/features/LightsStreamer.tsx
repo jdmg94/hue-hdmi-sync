@@ -28,9 +28,11 @@ const LightsStreaming = () => {
 
       worker.postMessage("start")
       worker.on("message", (message) => {
-        const colorData = chunk<number>(message.value, 3)
+        const colorData = chunk<number>(message, 3) as Array<
+          [number, number, number]
+        >
 
-        bridge!.transition(colorData as Array<[number, number, number]>)
+        bridge!.transition(colorData)
       })
     }
 
