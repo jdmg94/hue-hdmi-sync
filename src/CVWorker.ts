@@ -8,7 +8,7 @@ import {
   CAP_PROP_CONVERT_RGB,
   CAP_PROP_FRAME_WIDTH,
   CAP_PROP_FRAME_HEIGHT,
-} from "opencv4nodejs"
+} from "@u4/opencv4nodejs"
 
 import sleep from "./utils/sleep"
 
