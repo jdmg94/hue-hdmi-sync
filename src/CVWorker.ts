@@ -1,77 +1,68 @@
-import { Rect, Size } from "opencv4nodejs"
 import { parentPort } from "worker_threads"
+import {
+  Size,
+  VideoCapture,
+  CAP_ANY,
+  CAP_PROP_FPS,
+  CAP_PROP_CONVERT_RGB,
+  CAP_PROP_FRAME_WIDTH,
+  CAP_PROP_FRAME_HEIGHT,
+} from "@u4/opencv4nodejs"
 
-import { openVideoInput } from "./services/cv"
+import sleep from "./utils/sleep"
+import { bgr2rgb } from "./utils/bgr2rgb"
+import splitFrame from "./utils/splitFrame"
 
-const bgr2rgb = ({ y, x, w }) => [y, x, w].map(Math.floor)
-const isBlank = (buffer: number[][]) =>
-  buffer.flatMap((item) => item).reduce((sum, item) => sum + item, 0) === 0
+let shouldRun = true
+const size = new Size(1280, 720)
+const regions = splitFrame(size)
 
-const splitIntoLightstripGradientRegions = (size: Size): Rect[] => {
-  const halfHeight = Math.floor(size.height / 2)
-  const oneThirdWidth = Math.floor(size.width / 3)
-
-  const firstQuarter = new Rect(0, halfHeight, oneThirdWidth, halfHeight)
-  const secondQuarter = new Rect(0, 0, oneThirdWidth, halfHeight)
-
-  const oneThird = new Rect(oneThirdWidth, 0, oneThirdWidth, halfHeight)
-
-  const thirdQuarter = new Rect(oneThirdWidth * 2, 0, oneThirdWidth, halfHeight)
-  const fourthQuarter = new Rect(
-    oneThirdWidth * 2,
-    halfHeight,
-    oneThirdWidth,
-    halfHeight
-  )
-
-  return [
-    firstQuarter,
-    secondQuarter,
-    secondQuarter,
-    oneThird,
-    thirdQuarter,
-    thirdQuarter,
-    fourthQuarter,
-  ]
+const stopVideo = () => {
+  shouldRun = false
 }
 
 const processVideo = async () => {
-  let shouldRun = true
-  const [capture, size] = await openVideoInput()
-  
-  if(!capture) {
-    parentPort.postMessage("error: Could not open video capture device")
+  shouldRun = true
+  const capture = new VideoCapture(CAP_ANY)
+
+  await sleep(1000)
+
+  if (!capture) {
+    parentPort!.postMessage("error: Could not open video capture device")
     return
   }
 
-  parentPort.once("message", (message) => {
-    if (message === "stop") {
-      shouldRun = false
+  capture.set(CAP_PROP_FPS, 30)
+  capture.set(CAP_PROP_CONVERT_RGB, 1)
+  capture.set(CAP_PROP_FRAME_WIDTH, size.width)
+  capture.set(CAP_PROP_FRAME_HEIGHT, size.height)
+
+  const loop = setInterval(() => {
+    if (!shouldRun) {
       capture.release()
+      clearInterval(loop)
     }
-  })
 
-  const regions = splitIntoLightstripGradientRegions(size)
-
-  while (shouldRun) {
     const frame = capture.read()
-    if (!frame?.empty) {
-      const buffer = regions.map((rect) =>
-        bgr2rgb(frame.getRegion(rect).mean())
+
+    if (!frame.empty) {
+      const buffer = regions.flatMap((area) =>
+        bgr2rgb(frame.getRegion(area).mean())
       )
+      const value = new Uint32Array(buffer)
 
-      // #NOTE: prevents flickering
-      if (!isBlank(buffer)) {
-        const payload = JSON.stringify(buffer)
-
-        parentPort.postMessage(payload)
-      }
+      parentPort!.postMessage(value, [value.buffer])
     }
-  }
+  }, 33) // about 30fps
+
 }
 
-parentPort.once("message", (message) => {
+parentPort!.on("message", (message) => {
   if (message === "start") {
     processVideo()
+  }
+
+  if (message === "stop") {
+    stopVideo()
   }
 })

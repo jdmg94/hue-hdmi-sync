@@ -3,45 +3,40 @@ import { Worker } from "worker_threads"
 import React, { useEffect } from "react"
 import { Text, useInput, useApp } from "ink"
 
+import chunk from "../utils/chunk"
 import { useBridgeContext } from "../context/hueBridge"
 
 const worker = new Worker("./build/CVWorker")
 
 const LightsStreaming = () => {
   const app = useApp()
-  const {
-    state: { bridge, entertainmentGroup },
-  } = useBridgeContext()
+  const { state } = useBridgeContext()
+  const { bridge, entertainmentGroup } = state!
 
   useInput((input) => {
     if (input === "q") {
       worker.postMessage("stop")
+      bridge!.stop()
       app.exit()
+      process.exit(0)
     }
   })
 
   useEffect(() => {
     async function init() {
-      await bridge.start(entertainmentGroup.id)
+      await bridge!.start(entertainmentGroup!)
 
       worker.postMessage("start")
       worker.on("message", (message) => {
-        const buffer = message.toString()
-        try {
-          const gradientData = JSON.parse(buffer)
+        const colorData = chunk<number>(message, 3) as Array<
+          [number, number, number]
+        >
 
-          bridge.transition(gradientData)
-        } catch {} // ignore exit error
+        bridge!.transition(colorData)
       })
     }
 
     init()
-
-    return () => {
-      bridge.stop().then(() => {
-        worker.terminate()
-      })
-    }
   }, [])
 
   return (

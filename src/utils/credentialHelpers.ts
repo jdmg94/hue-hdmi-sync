@@ -33,6 +33,3 @@ export const clearPersistedCredentials = async () => {
     await removeFile(BridgeClientCredentialsPath, {});
   } catch {}
 };
-
-export const sleep = (timeout: number) =>
-  new Promise((resolve) => setTimeout(resolve, timeout));

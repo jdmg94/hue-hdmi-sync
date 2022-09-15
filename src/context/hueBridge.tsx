@@ -5,6 +5,7 @@ import React, {
   useContext,
   useReducer,
   ReactElement,
+  Dispatch,
 } from "react"
 import HueSync, {
   BridgeConfig,
@@ -14,7 +15,7 @@ import HueSync, {
 } from "hue-sync"
 
 export interface BridgeState {
-  bridge: HueSync
+  bridge?: HueSync
   bridgeConfig?: BridgeConfig
   credentials?: BridgeClientCredentials
   bridgeNetworkDevice?: HueBridgeNetworkDevice
@@ -22,11 +23,11 @@ export interface BridgeState {
 }
 
 const initialState: BridgeState = {
-  bridge: null,
-  credentials: null,
-  bridgeConfig: null,
-  bridgeNetworkDevice: null,
-  entertainmentGroup: null,
+  bridge: undefined,
+  credentials: undefined,
+  bridgeConfig: undefined,
+  bridgeNetworkDevice: undefined,
+  entertainmentGroup: undefined,
 }
 
 const stateSlice = createSlice({
@@ -48,7 +49,13 @@ const stateSlice = createSlice({
   },
 })
 
-const BridgeDataContext = createContext(null)
+const BridgeDataContext = createContext<
+  | {
+      state: BridgeState
+      dispatch: Dispatch<AnyAction>
+    }
+  | undefined
+>(undefined)
 
 export const BridgeProvider: FC<{
   children: ReactElement
@@ -63,13 +70,8 @@ export const BridgeProvider: FC<{
   )
 }
 
-type BridgeContextApi = {
-  state: BridgeState
-  dispatch: React.Dispatch<AnyAction>
-}
-
 export const useBridgeContext = () => {
-  const context: BridgeContextApi = useContext(BridgeDataContext)
+  const context = useContext(BridgeDataContext)
 
   if (!context) {
     throw new Error(
