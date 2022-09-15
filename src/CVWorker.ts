@@ -2,7 +2,7 @@ import { parentPort } from "worker_threads"
 import {
   Size,
   VideoCapture,
-  CAP_V4L,
+  CAP_ANY,
   CAP_PROP_FPS,
   CAP_PROP_CONVERT_RGB,
   CAP_PROP_FRAME_WIDTH,
@@ -22,7 +22,8 @@ const stopVideo = () => {
 }
 
 const processVideo = async () => {
-  const capture = new VideoCapture(CAP_V4L)
+  shouldRun = true
+  const capture = new VideoCapture(CAP_ANY)
 
   await sleep(1000)
 
@@ -36,9 +37,15 @@ const processVideo = async () => {
   capture.set(CAP_PROP_FRAME_WIDTH, size.width)
   capture.set(CAP_PROP_FRAME_HEIGHT, size.height)
 
-  while (shouldRun) {
+  const loop = setInterval(() => {
+    if (!shouldRun) {
+      capture.release()
+      clearInterval(loop)
+    }
+
     const frame = capture.read()
-    if (!frame?.empty) {
+
+    if (!frame.empty) {
       const buffer = regions.flatMap((area) =>
         bgr2rgb(frame.getRegion(area).mean())
       )
@@ -46,12 +53,11 @@ const processVideo = async () => {
 
       parentPort!.postMessage(value, [value.buffer])
     }
-  }
+  }, 33) // about 30fps
 
-  capture.release()
 }
 
-parentPort!.once("message", (message) => {
+parentPort!.on("message", (message) => {
   if (message === "start") {
     processVideo()
   }
