@@ -53,7 +53,7 @@ const processVideo = async () => {
 
       parentPort!.postMessage(value, [value.buffer])
     }
-  }, 33) // about 30fps
+  }, 1)
 
 }
 

@@ -12,7 +12,7 @@
     "build": "swc src -d build",
     "clean": "rm -rf build && mkdir build",
     "dev": "npm run clean && npm run build && npm start",
-    "prod": "npm run clean && npm run build && npm start:prod",
+    "prod": "npm run clean && npm run build && npm start:prod"
   },
   "author": "Jose Munoz",
   "license": "ISC",
