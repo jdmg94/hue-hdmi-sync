@@ -2,6 +2,7 @@ import Koa from "koa"
 import Boom from "@hapi/boom"
 import KoaRouter from "@koa/router"
 import bodyParser from "koa-body"
+import Bonjour from "@homebridge/ciao"
 import { Worker } from "worker_threads"
 import HueSync, { EntertainmentArea } from "hue-sync"
 
@@ -18,9 +19,10 @@ type HueWebState = {
   entertainmentArea?: EntertainmentArea
 }
 
-async function init() {
+async function init(port = 8080) {
   const app = new Koa()
   const router = new KoaRouter()
+  const bonjour = Bonjour.getResponder()
   const worker = new Worker("./build/CVWorker")
   let credentials = await getRegisteredCredentials()
 
@@ -39,6 +41,12 @@ async function init() {
       methodNotAllowed: () => Boom.methodNotAllowed(),
     })
   )
+
+  const broadcast = bonjour.createService({
+    port,
+    name: "Hue HDMI Sync",
+    type: "hue-hdmi-sync",
+  })
 
   worker.on("message", (message) => {
     const colorData = chunk<number>(message, 3)
@@ -142,8 +150,9 @@ async function init() {
     }
   })
 
-  app.listen(8080)
-  console.log("listening on port 8080!")
+  app.listen(port)
+  broadcast.advertise()
+  console.log(`listening on port ${port}!`)
 }
 
 init()
