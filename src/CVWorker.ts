@@ -28,8 +28,7 @@ const processVideo = async () => {
   await sleep(1000)
 
   if (!capture) {
-    parentPort!.postMessage("error: Could not open video capture device")
-    return
+    return parentPort!.postMessage("error: Could not open video capture device")
   }
 
   capture.set(CAP_PROP_FPS, 30)
@@ -54,7 +53,6 @@ const processVideo = async () => {
       parentPort!.postMessage(value, [value.buffer])
     }
   }, 1)
-
 }
 
 parentPort!.on("message", (message) => {
@@ -64,5 +62,12 @@ parentPort!.on("message", (message) => {
 
   if (message === "stop") {
     stopVideo()
+  }
+
+  if (message === "reset") {
+    stopVideo()
+    sleep(250).then(() => {
+      processVideo()
+    })
   }
 })
