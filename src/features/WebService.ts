@@ -1,15 +1,16 @@
 import Koa from "koa"
 import Boom from "@hapi/boom"
-import KoaRouter from "@koa/router"
 import bodyParser from "koa-body"
+import KoaRouter from "@koa/router"
+import Bonjour from "@homebridge/ciao"
 import { Worker } from "worker_threads"
 import HueSync, { EntertainmentArea } from "hue-sync"
 
 import chunk from "../utils/chunk"
 import sleep from "../utils/sleep"
 import {
-  getRegisteredCredentials,
   persistNewCredentials,
+  getRegisteredCredentials,
 } from "../utils/credentialHelpers"
 
 type HueWebState = {
@@ -18,9 +19,10 @@ type HueWebState = {
   entertainmentArea?: EntertainmentArea
 }
 
-async function init() {
+async function init(port = 8080) {
   const app = new Koa()
   const router = new KoaRouter()
+  const bonjour = Bonjour.getResponder()
   const worker = new Worker("./build/CVWorker")
   let credentials = await getRegisteredCredentials()
 
@@ -40,6 +42,12 @@ async function init() {
     })
   )
 
+  const broadcast = bonjour.createService({
+    port,
+    name: "Hue HDMI Sync",
+    type: "hue-hdmi-sync",
+  })
+
   worker.on("message", (message) => {
     const colorData = chunk<number>(message, 3)
 
@@ -47,11 +55,15 @@ async function init() {
   })
 
   router.get("/check", async (context) => {
-    const status = state.bridge
-      ? "initialized"
-      : credentials
-      ? "registered"
-      : "unregistered"
+    let status = "NOT_READY"
+
+    if (state.bridge && credentials) {
+      status = "IDLE"
+
+      if (state.isActive) {
+        status = "RUNNING"
+      }
+    }
 
     context.body = {
       status,
@@ -75,37 +87,51 @@ async function init() {
     credentials = nextCredentials
 
     context.body = {
-      status: "success",
+      status: "IDLE",
     }
   })
 
   router.get("/entertainment-areas", async (context) => {
     if (!state.bridge) {
-      return (context.body = Boom.preconditionFailed(
-        "Bridge Has Not Been Initialized!"
-      ))
+      const notInitializedException =
+        Boom.preconditionFailed("Not Initialized!").output
+
+      context.status = notInitializedException.statusCode
+      context.body = {
+        status: "ERROR",
+        payload: notInitializedException.payload,
+      }
+    } else {
+      const data = await state.bridge?.getEntertainmentAreas()
+
+      context.body = data
     }
-
-    const data = await state.bridge?.getEntertainmentAreas()
-
-    context.body = data
   })
 
   router.get("/stream/:id", async (context) => {
     if (!state.bridge) {
-      return (context.body = Boom.preconditionFailed("Not Ready to Stream!"))
-    }
+      const notReadyException = Boom.preconditionFailed(
+        "Not Ready to Stream!"
+      ).output
 
-    const area = await state.bridge?.getEntertainmentArea(context.params.id)
+      context.status = notReadyException.statusCode
+      context.body = {
+        status: "ERROR",
+        payload: notReadyException.payload,
+      }
+    } else {
+      const area = await state.bridge?.getEntertainmentArea(context.params.id)
 
-    await state.bridge.start(area)
-    worker.postMessage("start")
+      await state.bridge.start(area)
+      worker.postMessage("start")
 
-    state.isActive = true
-    context.body = {
-      status: "running",
+      state.isActive = true
+      context.body = {
+        status: "RUNNING",
+      }
     }
   })
+
   router.get("/stop", async (context) => {
     const noSocketException = Boom.preconditionFailed("No Active Stream!")
     if (!state.bridge) {
@@ -121,7 +147,7 @@ async function init() {
 
       state.isActive = false
       context.body = {
-        status: "stopped",
+        status: "IDLE",
       }
     } catch {
       context.status = noSocketException.output.statusCode
@@ -138,12 +164,13 @@ async function init() {
     })
 
     context.body = {
-      status: "initialized",
+      status: "IDLE",
     }
   })
 
-  app.listen(8080)
-  console.log("listening on port 8080!")
+  app.listen(port)
+  broadcast.advertise()
+  console.log(`listening on port ${port}!`)
 }
 
 init()

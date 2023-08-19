@@ -11,7 +11,7 @@ const worker = new Worker("./build/CVWorker")
 const LightsStreaming = () => {
   const app = useApp()
   const { state } = useBridgeContext()
-  const { bridge, entertainmentGroup } = state!
+  const { bridge, entertainmentGroup } = state || {}
 
   useInput((input) => {
     if (input === "q") {
@@ -19,6 +19,9 @@ const LightsStreaming = () => {
       bridge!.stop()
       app.exit()
       process.exit(0)
+    }
+    if (input === "r") {
+      worker.postMessage("reset")
     }
   })
 
@@ -46,7 +49,7 @@ const LightsStreaming = () => {
         <Spinner type="aesthetic" />
       </Text>
       {
-        " 💡 Streaming openCV video frame interpretation to light(s). Press Q to stop"
+        " 💡 Streaming openCV video frame interpretation to light(s). Press Q to stop, press R to reset the video input"
       }
     </Text>
   )
