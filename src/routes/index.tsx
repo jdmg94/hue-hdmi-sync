@@ -1,32 +1,33 @@
 import { useState } from "react"
 import { createFileRoute } from "@tanstack/react-router"
 import { Modal } from "#/components/Modal"
+import BridgeDiscovery from "#/components/sections/BridgeDiscovery"
 
 export const Route = createFileRoute("/")({ component: App })
 
 const FEATURES = [
 	{
-		title: "Type-Safe Routing",
-		desc: "Routes and links stay in sync across every page.",
-		detail:
-			"TanStack Router generates a fully typed route tree so every `Link`, `navigate` call, and search-param access is validated at compile time — no more silent 404s from a mistyped path.",
+		title: "Bridges",
+		desc: "Discover Hue bridges and register your lightshow",
+		detail: ({ onClose }: { onClose: () => void }) => <BridgeDiscovery onClose={onClose} />
+			
 	},
 	{
-		title: "Server Functions",
+		title: "Entertainment Areas",
 		desc: "Call server code from your UI without creating API boilerplate.",
-		detail:
+		detail: () =>
 			"createServerFn lets you colocate server logic right next to the component that needs it. No manual fetch wrappers or API routes required — the framework handles serialization and RPC.",
 	},
 	{
 		title: "Streaming by Default",
 		desc: "Ship progressively rendered responses for faster experiences.",
-		detail:
+		detail: () =>
 			"TanStack Start streams HTML from the server as data resolves, so users see meaningful content immediately instead of waiting for every promise to settle before the page renders.",
 	},
 	{
 		title: "Tailwind Native",
 		desc: "Design quickly with utility-first styling and reusable tokens.",
-		detail:
+		detail: () =>
 			"Tailwind v4 is configured entirely in CSS — no config file needed. CSS custom properties define your design tokens (colors, spacing, typography) and can be overridden per-theme.",
 	},
 ] as const
@@ -82,7 +83,7 @@ function App() {
 				title={active?.title ?? ""}
 				description={active?.desc}
 			>
-				<p className="text-sm text-muted-foreground">{active?.detail}</p>
+				{active?.detail({ onClose: () =>  setActive(null)})}
 			</Modal>
 		</main>
 	)
