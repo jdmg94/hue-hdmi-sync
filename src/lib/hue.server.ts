@@ -1,10 +1,7 @@
 import mdns from "node-dns-sd";
 import { dtls } from "node-dtls-client";
 import { DISCOVERY } from "./constants";
-import type { HueBridgeNetworkDevice, BridgeClientCredentials } from "./types"
-
-
-
+import type { BridgeClientCredentials, HueBridgeNetworkDevice } from "./types"
 
 /**
  * Discovers Philips Hue Bridges on the local network using mDNS.

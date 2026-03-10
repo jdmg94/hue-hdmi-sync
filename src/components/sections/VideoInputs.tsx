@@ -2,16 +2,16 @@ import { useQuery } from "@tanstack/react-query";
 import { Label } from "#/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "#/components/ui/radio-group";
 import { usePersistedState } from "#/hooks/usePersistedState";
-import {  } from "#/lib/hue.functions";
+import { getVideoInputs } from "#/lib/hue.functions";
 
 const VideoInputs = () => {
-    const [selected, setSelected] = usePersistedState("entertainment-area", "")    
+    const [selected, setSelected] = usePersistedState("video-input", "")
     const {
         isLoading,
         isError,
         error,
         data
-    } = useQuery({ queryKey: ['video-inputs'], queryFn: () => [] })
+    } = useQuery({ queryKey: ['video-inputs'], queryFn: getVideoInputs })
 
     if (isError) {
         return (

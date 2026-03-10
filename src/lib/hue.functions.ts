@@ -1,6 +1,7 @@
 import { createServerFn } from '@tanstack/react-start'
 import type { Axios } from 'axios';
 import { createAxiosWithLookup } from './axios';
+import { listVideoInputs } from './capture.server';
 import { discover, register } from "./hue.server"
 import type { EntertainmentArea, HueBridgeNetworkDevice, HueBridgeRegistration } from "./types"
 
@@ -51,3 +52,7 @@ export const updateEntertainmentArea = createServerFn()
 
     return wrapper.data;
   })
+
+export const getVideoInputs = createServerFn().handler(async () => {
+  return listVideoInputs()
+})

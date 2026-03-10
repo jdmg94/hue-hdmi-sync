@@ -1,15 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Modal } from "#/components/Modal";
 import BridgeDiscovery from "#/components/sections/BridgeDiscovery";
 import EntertainmentAreas from "#/components/sections/EntertainmentAreas";
+import VideoInputs from "#/components/sections/VideoInputs";
 import { usePersistedState } from "#/hooks/usePersistedState";
-import { getEntertainmentAreas } from "#/lib/hue.functions";
+import { getEntertainmentAreas, getVideoInputs, initializeBridge } from "#/lib/hue.functions";
 import type {
 	HueBridgeRegistration
 } from "#/lib/types";
-
 
 enum ModalState {
 	IDLE,
@@ -17,7 +17,6 @@ enum ModalState {
 	ENTERTAINMENT_AREAS,
 	VIDEO_INPUTS,
 }
-
 
 export const Route = createFileRoute("/")({ component: App });
 
@@ -27,10 +26,14 @@ function App() {
 		"entertainment-area",
 		null,
 	);
+	const [selectedVideoInputId] = usePersistedState<string | null>(
+		"video-input",
+		null,
+	);
 	const [bridgeReg] = usePersistedState<HueBridgeRegistration | null>(
 		"bridge-reg",
 		null,
-	);	
+	);
 
 	const { data: areas } = useQuery({
 		queryKey: ["entertainment-areas"],
@@ -38,8 +41,23 @@ function App() {
 		enabled: !!bridgeReg,
 	});
 
+	const { data: videoInputs } = useQuery({
+		queryKey: ["video-inputs"],
+		queryFn: getVideoInputs,
+	});
+
+	useEffect(() => {
+		if (bridgeReg) {
+			initializeBridge({ data: bridgeReg })
+		}
+	}, [bridgeReg])
+
 	const selectedArea = areas?.find(
 		(a: { id: string; name: string }) => a.id === selectedAreaId,
+	);
+
+	const selectedVideoInput = videoInputs?.find(
+		(v: { id: string; name: string }) => v.id === selectedVideoInputId,
 	);
 
 	return (
@@ -73,6 +91,20 @@ function App() {
 						{selectedArea ? (
 							<p className="text-base font-medium text-[var(--sea-ink)]">
 								{selectedArea.name}
+							</p>
+						) : (
+							<p className="text-base text-[var(--sea-ink-soft)] italic">
+								None selected
+							</p>
+						)}
+					</div>
+					<div>
+						<p className="text-xs font-semibold uppercase tracking-widest text-[var(--sea-ink-soft)] mb-1">
+							Video Input
+						</p>
+						{selectedVideoInput ? (
+							<p className="text-base font-medium text-[var(--sea-ink)]">
+								{selectedVideoInput.name}
 							</p>
 						) : (
 							<p className="text-base text-[var(--sea-ink-soft)] italic">
@@ -132,11 +164,11 @@ function App() {
 					<p className="m-0 text-sm text-[var(--sea-ink-soft)]">
 						select an input to capture its content
 					</p>
-					{/* {selectedArea && (
+					{selectedVideoInput && (
 						<p className="mt-3 text-xs font-medium text-[var(--lagoon-deep)] truncate">
-							{selectedArea.name}
+							{selectedVideoInput.name}
 						</p>
-					)} */}
+					)}
 				</button>
 			</section>
 			<Modal
@@ -158,7 +190,7 @@ function App() {
 				onOpenChange={(open) => !open && setModalState(ModalState.IDLE)}
 				title="Video Inputs"
 			>
-				<p>Work in Progress</p>
+				<VideoInputs />
 			</Modal>
 		</main>
 	);
