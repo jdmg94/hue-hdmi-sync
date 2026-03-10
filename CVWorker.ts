@@ -1,9 +1,7 @@
+import sharp from "sharp"
 import { parentPort } from "worker_threads"
 import { spawn, ChildProcess } from "child_process"
-import sharp from "sharp"
-
-import sleep from "./utils/sleep.js"
-import splitFrame from "./utils/splitFrame.js"
+import { splitIntoLightstripGradientRegions as splitFrame} from "#/lib/utils"
 
 let shouldRun = true
 let ffmpegProcess: ChildProcess | null = null
@@ -12,6 +10,8 @@ const WIDTH = 1280
 const HEIGHT = 720
 const FPS = 30
 const FRAME_SIZE = WIDTH * HEIGHT * 3 // RGB24 = 3 bytes per pixel
+
+const sleep = (delay: number) => new Promise(resolve => setTimeout(resolve, delay));
 
 const { regions, indices } = splitFrame({ width: WIDTH, height: HEIGHT })
 
@@ -85,9 +85,7 @@ const processVideo = async () => {
 
   // Spawn FFmpeg to capture video from /dev/video0
   ffmpegProcess = spawn("ffmpeg", [
-    // "-f", "v4l2",                    // Video4Linux2 input
     "-vcodec", "mjpeg",        // MJPEG from capture card
-    "-video_size", `${WIDTH}x${HEIGHT}`,
     "-framerate", FPS.toString(),
     "-i", "/dev/video0",             // HDMI capture device
     "-f", "rawvideo",                // Output raw video

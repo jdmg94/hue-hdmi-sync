@@ -1,22 +1,10 @@
 import mdns from "node-dns-sd";
 import { dtls } from "node-dtls-client";
-
 import { DISCOVERY } from "./constants";
+import type { HueBridgeNetworkDevice, BridgeClientCredentials } from "./types"
 
 
-export interface BridgeClientCredentials {
-    username: string;
-    clientkey: string;
-}
 
-/**
- * Bridge network device information
- */
-export interface HueBridgeNetworkDevice {
-    id: string;
-    port?: number;
-    ip?: string;
-}
 
 /**
  * Discovers Philips Hue Bridges on the local network using mDNS.
@@ -36,19 +24,22 @@ export async function discover(): Promise<HueBridgeNetworkDevice[]> {
         });
 
 
-        return localSearch.map((item) => {
-            const port = item.service.port;
+        const results = localSearch.map((item) => {
             const ip = item.address;
             const [buffer] = item.packet.additionals;
             const id = buffer.rdata.bridgeid;
-            // const name = item.model_name
+            const name = item.model_name
 
             return {
                 id,
-                port,
+                name,
                 ip,
             };
         });
+
+        console.log("the discovery results: ", results)
+
+        return results
     } catch (mdnsError) {
         try {
             const response = await fetch(DISCOVERY.CLOUD_API);

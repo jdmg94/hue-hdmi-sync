@@ -13,12 +13,6 @@ export const ENTERTAINMENT_API = {
   DEFAULT_TIMEOUT: 1000,
 } as const;
 
-// API Endpoints
-export const API_PATHS = {
-  CONFIG: "/api/0/config",
-  CLIP_V2_RESOURCE: "/clip/v2/resource",
-} as const;
-
 // Discovery
 export const DISCOVERY = {
   MDNS_SERVICE: "_hue._tcp.local",

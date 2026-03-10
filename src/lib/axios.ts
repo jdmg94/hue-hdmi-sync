@@ -1,7 +1,7 @@
 import dns from "dns";
 import axios from "axios";
 import type { AxiosInstance } from "axios";
-import type { BridgeClientCredentials } from "./hue.server";
+import type { BridgeClientCredentials } from "./types";
 
 export function createAxiosWithLookup(
 	domain: string,
@@ -15,7 +15,7 @@ export function createAxiosWithLookup(
 			}
 			return dns.lookup(hostname, 4, cb);
 		},
-		baseURL: `https://${domain}/clip/v2`,
+		baseURL: `https://${domain}/clip/v2/resource`,
 		headers: {
 			["hue-application-key"]: credentials.username
 		}

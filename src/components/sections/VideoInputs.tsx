@@ -2,16 +2,16 @@ import { useQuery } from "@tanstack/react-query";
 import { Label } from "#/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "#/components/ui/radio-group";
 import { usePersistedState } from "#/hooks/usePersistedState";
-import { getEntertainmentAreas } from "#/lib/hue.functions";
+import {  } from "#/lib/hue.functions";
 
-const EntertainmentAreas = () => {
+const VideoInputs = () => {
     const [selected, setSelected] = usePersistedState("entertainment-area", "")    
     const {
         isLoading,
         isError,
         error,
         data
-    } = useQuery({ queryKey: ['entertainment-areas'], queryFn: getEntertainmentAreas })
+    } = useQuery({ queryKey: ['video-inputs'], queryFn: () => [] })
 
     if (isError) {
         return (
@@ -28,7 +28,7 @@ const EntertainmentAreas = () => {
     }
 
     if (!data || data.length === 0) {
-        return <span>No areas found</span>
+        return <span>No inputs found</span>
     }
 
     return (
@@ -43,4 +43,4 @@ const EntertainmentAreas = () => {
     )
 }
 
-export default EntertainmentAreas
+export default VideoInputs
