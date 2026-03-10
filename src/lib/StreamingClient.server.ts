@@ -13,7 +13,7 @@ import type { EntertainmentArea, ResourceNode } from "#/lib/types";
 export class StreamingClient {
   private socket: dtls.Socket | null = null;
   private abortController: AbortController | null = null;
-  private entertainmentArea: EntertainmentArea | null = null;
+  private entertainmentAreaId: string | null = null;
 
   constructor(
     private readonly bridgeUrl: string,
@@ -44,13 +44,13 @@ export class StreamingClient {
    * // Now you can call transition() to send color updates
    */
   async start(
-    selectedArea: EntertainmentArea,
+    selectedAreaId: string,
     timeout: number = ENTERTAINMENT_API.DEFAULT_TIMEOUT
   ): Promise<void> {
-    this.entertainmentArea = selectedArea;
+    this.entertainmentAreaId = selectedAreaId;
     this.abortController = new AbortController();
 
-    await this.updateAreaFn(selectedArea.id, {
+    await this.updateAreaFn(selectedAreaId, {
       action: "start",
     });
 
@@ -69,7 +69,7 @@ export class StreamingClient {
       },
     } as unknown as dtls.Options);
 
-    return new Promise((resolve) => this.socket!.on("connected", resolve));
+    return new Promise((resolve) => this.socket.on("connected", resolve));
   }
 
   /**
@@ -85,7 +85,7 @@ export class StreamingClient {
       throw new HueBridgeStreamError("No active datagram socket!");
     }
 
-    const id = this.entertainmentArea!.id;
+    const id = this.entertainmentAreaId as string;
     this.socket.on("close", () => {
       this.updateAreaFn(id, {
         action: "stop",
@@ -93,7 +93,7 @@ export class StreamingClient {
     });
 
     this.abortController!.abort();
-    this.entertainmentArea = null;
+    this.entertainmentAreaId = null;
     this.abortController = null;
     this.socket = null;
   }
@@ -115,9 +115,13 @@ export class StreamingClient {
    * ]);
    */
   transition(colors: number[][]): void {
+    console.log("transitioning colors!")
     if (!this.socket) {
       throw new HueBridgeStreamError("No active datagram socket!");
     }
+
+        console.log("assembling message buffer!")
+
 
     const protocol = Buffer.from(ENTERTAINMENT_API.PROTOCOL_NAME);
     const version = Buffer.from(ENTERTAINMENT_API.PROTOCOL_VERSION);
@@ -128,7 +132,7 @@ export class StreamingClient {
     ]);
     const colorMode = Buffer.from([ENTERTAINMENT_API.COLOR_MODE.RGB]);
     const reservedSpace = Buffer.from([ENTERTAINMENT_API.RESERVED_SPACE]);
-    const groupId = Buffer.from(this.entertainmentArea!.id);
+    const groupId = Buffer.from(this.entertainmentAreaId as string);
     const rgbChannels = colors.map((rgb, channelIndex) => {
       return Buffer.from([
         channelIndex, // RGB Channel Id
@@ -152,6 +156,7 @@ export class StreamingClient {
       ...rgbChannels,
     ]);
 
+    console.log("sending color updates")
     this.socket.send(message);
   }
 }

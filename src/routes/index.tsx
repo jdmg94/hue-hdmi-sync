@@ -5,11 +5,14 @@ import { Modal } from "#/components/Modal";
 import BridgeDiscovery from "#/components/sections/BridgeDiscovery";
 import EntertainmentAreas from "#/components/sections/EntertainmentAreas";
 import VideoInputs from "#/components/sections/VideoInputs";
+import { NoiseBackground } from "#/components/ui/noise-background";
 import { usePersistedState } from "#/hooks/usePersistedState";
 import {
 	getEntertainmentAreas,
 	getVideoInputs,
 	initializeBridge,
+	startStreaming,
+	stopStreaming,
 } from "#/lib/hue.functions";
 import type { HueBridgeRegistration } from "#/lib/types";
 
@@ -55,6 +58,14 @@ function App() {
 		}
 	}, [bridgeReg]);
 
+	useEffect(() => {
+		if (isPlaying && selectedAreaId) {
+			startStreaming({ data: { id: selectedAreaId } });
+		} else {
+			stopStreaming();
+		}
+	}, [isPlaying, selectedAreaId]);
+
 	const selectedArea = areas?.find(
 		(a: { id: string; name: string }) => a.id === selectedAreaId,
 	);
@@ -65,89 +76,92 @@ function App() {
 
 	return (
 		<main className="page-wrap px-4 pb-8 pt-14">
-			<section className="island-shell rise-in relative overflow-hidden rounded-[2rem] px-6 py-10 sm:px-10 sm:py-14">
-				<div className="pointer-events-none absolute -left-20 -top-24 h-56 w-56 rounded-full bg-[radial-gradient(circle,rgba(204,58,8,0.32),transparent_66%)]" />
-				<div className="pointer-events-none absolute -bottom-20 -right-20 h-56 w-56 rounded-full bg-[radial-gradient(circle,rgba(110,28,8,0.18),transparent_66%)]" />
-				<button
-					type="button"
-					onClick={() => setIsPlaying((p) => !p)}
-					aria-label={isPlaying ? "Pause sync" : "Play sync"}
-					className="absolute bottom-6 right-6 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--lagoon-deep)] text-white shadow-lg transition hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
-				>
-					{isPlaying ? (
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							width="22"
-							height="22"
-							viewBox="0 0 24 24"
-							fill="currentColor"
-							aria-hidden="true"
-						>
-							<rect x="6" y="5" width="4" height="14" rx="1" />
-							<rect x="14" y="5" width="4" height="14" rx="1" />
-						</svg>
-					) : (
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							width="22"
-							height="22"
-							viewBox="0 0 24 24"
-							fill="currentColor"
-							aria-hidden="true"
-						>
-							<path d="M8 5.14v13.72a1 1 0 0 0 1.5.86l11-6.86a1 1 0 0 0 0-1.72l-11-6.86A1 1 0 0 0 8 5.14z" />
-						</svg>
-					)}
-				</button>
-				<p className="island-kicker mb-3">Hue HDMI Sync</p>
-				<h1 className="display-title mb-5 max-w-3xl text-4xl leading-[1.02] font-bold tracking-tight text-[var(--sea-ink)] sm:text-6xl">
-					Sync your lights to your TV.
-				</h1>
-				<div className="mb-8 flex flex-wrap gap-6">
-					<div>
-						<p className="text-xs font-semibold uppercase tracking-widest text-[var(--sea-ink-soft)] mb-1">
-							Bridge
-						</p>
-						{bridgeReg ? (
-							<p className="text-base font-medium text-[var(--sea-ink)]">
-								{bridgeReg.ip}
-							</p>
+			<NoiseBackground animating={isPlaying}>
+				<section className="island-shell rise-in relative overflow-hidden rounded-xl px-6 py-10 sm:px-10 sm:py-14">
+					<div className="pointer-events-none absolute -left-20 -top-24 h-56 w-56 rounded-full bg-[radial-gradient(circle,rgba(204,58,8,0.32),transparent_66%)]" />
+					<div className="pointer-events-none absolute -bottom-20 -right-20 h-56 w-56 rounded-full bg-[radial-gradient(circle,rgba(110,28,8,0.18),transparent_66%)]" />
+					<button
+						type="button"
+						disabled={!bridgeReg || !selectedAreaId || !selectedVideoInputId}
+						onClick={() => setIsPlaying((p) => !p)}
+						aria-label={isPlaying ? "Pause sync" : "Play sync"}
+						className="absolute bottom-6 right-6 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--lagoon-deep)] text-white shadow-lg transition hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:active:scale-100"
+					>
+						{isPlaying ? (
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								width="22"
+								height="22"
+								viewBox="0 0 24 24"
+								fill="currentColor"
+								aria-hidden="true"
+							>
+								<rect x="6" y="5" width="4" height="14" rx="1" />
+								<rect x="14" y="5" width="4" height="14" rx="1" />
+							</svg>
 						) : (
-							<p className="text-base text-[var(--sea-ink-soft)] italic">
-								Not paired
-							</p>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								width="22"
+								height="22"
+								viewBox="0 0 24 24"
+								fill="currentColor"
+								aria-hidden="true"
+							>
+								<path d="M8 5.14v13.72a1 1 0 0 0 1.5.86l11-6.86a1 1 0 0 0 0-1.72l-11-6.86A1 1 0 0 0 8 5.14z" />
+							</svg>
 						)}
+					</button>
+					<p className="island-kicker mb-3">Hue HDMI Sync</p>
+					<h1 className="display-title mb-5 max-w-3xl text-4xl leading-[1.02] font-bold tracking-tight text-[var(--sea-ink)] sm:text-6xl">
+						Sync your lights to your TV.
+					</h1>
+					<div className="mb-8 flex flex-wrap gap-6">
+						<div>
+							<p className="text-xs font-semibold uppercase tracking-widest text-[var(--sea-ink-soft)] mb-1">
+								Bridge
+							</p>
+							{bridgeReg ? (
+								<p className="text-base font-medium text-[var(--sea-ink)]">
+									{bridgeReg.ip}
+								</p>
+							) : (
+								<p className="text-base text-[var(--sea-ink-soft)] italic">
+									Not paired
+								</p>
+							)}
+						</div>
+						<div>
+							<p className="text-xs font-semibold uppercase tracking-widest text-[var(--sea-ink-soft)] mb-1">
+								Entertainment Area
+							</p>
+							{selectedArea ? (
+								<p className="text-base font-medium text-[var(--sea-ink)]">
+									{selectedArea.name}
+								</p>
+							) : (
+								<p className="text-base text-[var(--sea-ink-soft)] italic">
+									None selected
+								</p>
+							)}
+						</div>
+						<div>
+							<p className="text-xs font-semibold uppercase tracking-widest text-[var(--sea-ink-soft)] mb-1">
+								Video Input
+							</p>
+							{selectedVideoInput ? (
+								<p className="text-base font-medium text-[var(--sea-ink)]">
+									{selectedVideoInput.name}
+								</p>
+							) : (
+								<p className="text-base text-[var(--sea-ink-soft)] italic">
+									None selected
+								</p>
+							)}
+						</div>
 					</div>
-					<div>
-						<p className="text-xs font-semibold uppercase tracking-widest text-[var(--sea-ink-soft)] mb-1">
-							Entertainment Area
-						</p>
-						{selectedArea ? (
-							<p className="text-base font-medium text-[var(--sea-ink)]">
-								{selectedArea.name}
-							</p>
-						) : (
-							<p className="text-base text-[var(--sea-ink-soft)] italic">
-								None selected
-							</p>
-						)}
-					</div>
-					<div>
-						<p className="text-xs font-semibold uppercase tracking-widest text-[var(--sea-ink-soft)] mb-1">
-							Video Input
-						</p>
-						{selectedVideoInput ? (
-							<p className="text-base font-medium text-[var(--sea-ink)]">
-								{selectedVideoInput.name}
-							</p>
-						) : (
-							<p className="text-base text-[var(--sea-ink-soft)] italic">
-								None selected
-							</p>
-						)}
-					</div>
-				</div>
-			</section>
+				</section>
+			</NoiseBackground>
 
 			<section className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
 				<button

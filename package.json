@@ -28,6 +28,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.577.0",
+    "motion": "^12.35.2",
     "nitro": "npm:nitro-nightly@latest",
     "node-dns-sd": "^1.0.1",
     "node-dtls-client": "^1.1.1",
