@@ -1,15 +1,17 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react"
+import { useEffect, useState } from "react";
 import { Modal } from "#/components/Modal";
 import BridgeDiscovery from "#/components/sections/BridgeDiscovery";
 import EntertainmentAreas from "#/components/sections/EntertainmentAreas";
 import VideoInputs from "#/components/sections/VideoInputs";
 import { usePersistedState } from "#/hooks/usePersistedState";
-import { getEntertainmentAreas, getVideoInputs, initializeBridge } from "#/lib/hue.functions";
-import type {
-	HueBridgeRegistration
-} from "#/lib/types";
+import {
+	getEntertainmentAreas,
+	getVideoInputs,
+	initializeBridge,
+} from "#/lib/hue.functions";
+import type { HueBridgeRegistration } from "#/lib/types";
 
 enum ModalState {
 	IDLE,
@@ -21,7 +23,8 @@ enum ModalState {
 export const Route = createFileRoute("/")({ component: App });
 
 function App() {
-	const [modalState, setModalState] = useState(ModalState.IDLE)
+	const [modalState, setModalState] = useState(ModalState.IDLE);
+	const [isPlaying, setIsPlaying] = useState(false);
 	const [selectedAreaId] = usePersistedState<string | null>(
 		"entertainment-area",
 		null,
@@ -48,9 +51,9 @@ function App() {
 
 	useEffect(() => {
 		if (bridgeReg) {
-			initializeBridge({ data: bridgeReg })
+			initializeBridge({ data: bridgeReg });
 		}
-	}, [bridgeReg])
+	}, [bridgeReg]);
 
 	const selectedArea = areas?.find(
 		(a: { id: string; name: string }) => a.id === selectedAreaId,
@@ -65,6 +68,37 @@ function App() {
 			<section className="island-shell rise-in relative overflow-hidden rounded-[2rem] px-6 py-10 sm:px-10 sm:py-14">
 				<div className="pointer-events-none absolute -left-20 -top-24 h-56 w-56 rounded-full bg-[radial-gradient(circle,rgba(204,58,8,0.32),transparent_66%)]" />
 				<div className="pointer-events-none absolute -bottom-20 -right-20 h-56 w-56 rounded-full bg-[radial-gradient(circle,rgba(110,28,8,0.18),transparent_66%)]" />
+				<button
+					type="button"
+					onClick={() => setIsPlaying((p) => !p)}
+					aria-label={isPlaying ? "Pause sync" : "Play sync"}
+					className="absolute bottom-6 right-6 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--lagoon-deep)] text-white shadow-lg transition hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
+				>
+					{isPlaying ? (
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							width="22"
+							height="22"
+							viewBox="0 0 24 24"
+							fill="currentColor"
+							aria-hidden="true"
+						>
+							<rect x="6" y="5" width="4" height="14" rx="1" />
+							<rect x="14" y="5" width="4" height="14" rx="1" />
+						</svg>
+					) : (
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							width="22"
+							height="22"
+							viewBox="0 0 24 24"
+							fill="currentColor"
+							aria-hidden="true"
+						>
+							<path d="M8 5.14v13.72a1 1 0 0 0 1.5.86l11-6.86a1 1 0 0 0 0-1.72l-11-6.86A1 1 0 0 0 8 5.14z" />
+						</svg>
+					)}
+				</button>
 				<p className="island-kicker mb-3">Hue HDMI Sync</p>
 				<h1 className="display-title mb-5 max-w-3xl text-4xl leading-[1.02] font-bold tracking-tight text-[var(--sea-ink)] sm:text-6xl">
 					Sync your lights to your TV.
