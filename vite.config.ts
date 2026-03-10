@@ -9,7 +9,9 @@ import tailwindcss from '@tailwindcss/vite'
 import { nitro } from 'nitro/vite'
 
 const config = defineConfig({
-  optimizeDeps: { exclude: ["node-aead-crypto-darwin-arm64", "node-aead-crypto-darwin-universal"] },
+  optimizeDeps: { 
+    exclude: ['node-dns-sd', 'node-dtls-client'],    
+  },
   plugins: [
     devtools(),
     nitro({ rollupConfig: { external: [/^@sentry\//] } }),

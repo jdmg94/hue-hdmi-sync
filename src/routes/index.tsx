@@ -2,6 +2,7 @@ import { useState } from "react"
 import { createFileRoute } from "@tanstack/react-router"
 import { Modal } from "#/components/Modal"
 import BridgeDiscovery from "#/components/sections/BridgeDiscovery"
+import EntertainmentAreas from "#/components/sections/EntertainmentAreas"
 
 export const Route = createFileRoute("/")({ component: App })
 
@@ -15,8 +16,7 @@ const FEATURES = [
 	{
 		title: "Entertainment Areas",
 		desc: "Call server code from your UI without creating API boilerplate.",
-		detail: () =>
-			"createServerFn lets you colocate server logic right next to the component that needs it. No manual fetch wrappers or API routes required — the framework handles serialization and RPC.",
+		detail: ({ onClose }: { onClose: () => void }) => <EntertainmentAreas />,
 	},
 	{
 		title: "Streaming by Default",
