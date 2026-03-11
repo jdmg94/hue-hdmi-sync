@@ -1,62 +1,121 @@
-Welcome to your new TanStack Start app! 
+<div align="center">
 
-# Getting Started
+<h1>Hue HDMI Sync</h1>
 
-To run this application:
+<p>
+  A web app that syncs your Philips Hue lights to any video input in real time.
+</p>
+
+<!-- Badges -->
+<p>
+  <a href="https://github.com/jdmg94/hue-hdmi-sync/graphs/contributors">
+    <img src="https://img.shields.io/github/contributors/jdmg94/hue-hdmi-sync" alt="contributors" />
+  </a>
+  <a href="">
+    <img src="https://img.shields.io/github/last-commit/jdmg94/hue-hdmi-sync" alt="last update" />
+  </a>
+  <a href="https://github.com/jdmg94/hue-hdmi-sync/issues/">
+    <img src="https://img.shields.io/github/issues/jdmg94/hue-hdmi-sync" alt="open issues" />
+  </a>
+  <a href="https://github.com/jdmg94/hue-hdmi-sync/blob/main/LICENSE">
+    <img src="https://img.shields.io/github/license/jdmg94/hue-hdmi-sync.svg" alt="license" />
+  </a>
+</p>
+
+<h4>
+  <a href="https://github.com/jdmg94/hue-hdmi-sync/issues/">Report Bug or Request Feature</a>
+</h4>
+</div>
+
+<br />
+
+# Table of Contents
+
+- [About the Project](#about-the-project)
+- [Getting Started](#getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Installation](#installation)
+- [Usage](#usage)
+- [Development](#development)
+  - [Commands](#commands)
+  - [Environment Variables](#environment-variables)
+  - [Routing](#routing)
+  - [Styling](#styling)
+  - [Linting & Formatting](#linting--formatting)
+  - [Testing](#testing)
+- [License](#license)
+
+## About the Project
+
+**Hue HDMI Sync** is a self-hosted web application that captures a video input source (display, camera, or screen) and streams real-time color data to your Philips Hue Entertainment Area. It uses the [Philips Hue Entertainment API](https://developers.meethue.com/develop/hue-api-v2/api-reference/) over a DTLS connection to push color updates with minimal latency.
+
+Built with:
+- [TanStack Start](https://tanstack.com/start) — React SSR framework
+- [TanStack Router](https://tanstack.com/router) — file-based routing
+- [Nitro](https://nitro.unjs.io/) — server runtime
+- [hue-sync](https://github.com/jdmg94/Hue-Sync) — Philips Hue API V2 client
+- [Tailwind CSS v4](https://tailwindcss.com/) + [Shadcn](https://ui.shadcn.com/)
+
+## Getting Started
+
+### Prerequisites
+- FFMPEG
+- Node.js 24+
+- [pnpm](https://pnpm.io/)
+- A Philips Hue Bridge with at least one Entertainment Area configured
+- an HDMI capture card (optional but reccommended)
+
+### Installation
 
 ```bash
+git clone https://github.com/jdmg94/hue-hdmi-sync.git
+cd hue-hdmi-sync
 pnpm install
+```
+
+## Usage
+
+1. Start the dev server:
+
+```bash
 pnpm dev
 ```
 
-# Building For Production
+2. Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-To build this application for production:
+3. **Pair your Bridge** — click **Bridges**, discover your Hue Bridge on the local network, and follow the pairing prompt (press the button on the bridge when asked).
 
-```bash
-pnpm build
-```
+4. **Select an Entertainment Area** — choose the room or zone you want to sync.
 
-## Testing
+5. **Select a Video Input** — pick the screen, window, or camera to capture.
 
-This project uses [Vitest](https://vitest.dev/) for testing. You can run the tests with:
+6. **Press Play** — the app starts streaming color updates from the video input to your lights in real time.
 
-```bash
-pnpm test
-```
+> **HTTPS note:** The Hue Bridge requires a secure DTLS connection. The `signify.pem` CA certificate is included at the root of the project. The dev server is pre-configured to load it via `NODE_EXTRA_CA_CERTS`. For production deployments set that environment variable accordingly.
 
-## Styling
+## Development
 
-This project uses [Tailwind CSS](https://tailwindcss.com/) for styling.
-
-### Removing Tailwind CSS
-
-If you prefer not to use Tailwind CSS:
-
-1. Remove the demo pages in `src/routes/demo/`
-2. Replace the Tailwind import in `src/styles.css` with your own styles
-3. Remove `tailwindcss()` from the plugins array in `vite.config.ts`
-4. Uninstall the packages: `pnpm add @tailwindcss/vite tailwindcss --dev`
-
-## Linting & Formatting
-
-This project uses [Biome](https://biomejs.dev/) for linting and formatting. The following scripts are available:
-
+### Commands
 
 ```bash
-pnpm lint
-pnpm format
-pnpm check
+pnpm dev      # Start dev server on port 3000
+pnpm build    # Production build
+pnpm preview  # Preview production build
+pnpm test     # Run tests with Vitest
+pnpm check    # Biome lint + format check (run before committing)
+pnpm lint     # Biome lint only
+pnpm format   # Biome format only
 ```
 
+To run a single test file:
 
-## T3Env
+```bash
+pnpm vitest run src/path/to/file.test.ts
+```
 
-- You can use T3Env to add type safety to your environment variables.
-- Add Environment variables to the `src/env.mjs` file.
-- Use the environment variables in your code.
+### Environment Variables
 
-### Usage
+Environment variables are declared in [src/env.ts](src/env.ts) using [T3Env](https://env.t3.gg/) + Zod. Server-only vars go in `server: {}`, client-exposed vars must be prefixed `VITE_` and go in `client: {}`.
 
 ```ts
 import { env } from "#/env";
@@ -64,168 +123,56 @@ import { env } from "#/env";
 console.log(env.VITE_APP_TITLE);
 ```
 
+### Routing
 
+Routes are file-based under [src/routes/](src/routes/). Each file exports a `Route` const via `createFileRoute`. The root shell (HTML document, global layout) lives in [src/routes/__root.tsx](src/routes/__root.tsx).
 
+```tsx
+import { createFileRoute } from "@tanstack/react-router";
 
+export const Route = createFileRoute("/my-page")({
+  component: MyPage,
+});
+```
 
-## Shadcn
+### Styling
 
-Add components using the latest version of [Shadcn](https://ui.shadcn.com/).
+Tailwind CSS v4 is configured entirely in [src/styles.css](src/styles.css) — no config file. Design tokens (colors, spacing) are defined as CSS custom properties (e.g. `--sea-ink`, `--lagoon-deep`).
+
+Use the `cn()` utility from [src/lib/utils.ts](src/lib/utils.ts) for conditional classnames:
+
+```ts
+import { cn } from "#/lib/utils";
+
+cn("base-class", condition && "conditional-class");
+```
+
+Add Shadcn components:
 
 ```bash
-pnpm dlx shadcn@latest add button
+pnpm dlx shadcn@latest add <component-name>
 ```
 
+### Linting & Formatting
 
+[Biome](https://biomejs.dev/) handles both linting and formatting with the following conventions:
+- Indent style: **tabs**
+- Quote style: **double**
 
-## Routing
-
-This project uses [TanStack Router](https://tanstack.com/router) with file-based routing. Routes are managed as files in `src/routes`.
-
-### Adding A Route
-
-To add a new route to your application just add a new file in the `./src/routes` directory.
-
-TanStack will automatically generate the content of the route file for you.
-
-Now that you have two routes you can use a `Link` component to navigate between them.
-
-### Adding Links
-
-To use SPA (Single Page Application) navigation you will need to import the `Link` component from `@tanstack/react-router`.
-
-```tsx
-import { Link } from "@tanstack/react-router";
+```bash
+pnpm check    # lint + format check
+pnpm lint     # lint only
+pnpm format   # format only
 ```
 
-Then anywhere in your JSX you can use it like so:
+### Testing
 
-```tsx
-<Link to="/about">About</Link>
+Tests use [Vitest](https://vitest.dev/) with [jsdom](https://github.com/jsdom/jsdom) and [Testing Library](https://testing-library.com/):
+
+```bash
+pnpm test
 ```
 
-This will create a link that will navigate to the `/about` route.
+## License
 
-More information on the `Link` component can be found in the [Link documentation](https://tanstack.com/router/v1/docs/framework/react/api/router/linkComponent).
-
-### Using A Layout
-
-In the File Based Routing setup the layout is located in `src/routes/__root.tsx`. Anything you add to the root route will appear in all the routes. The route content will appear in the JSX where you render `{children}` in the `shellComponent`.
-
-Here is an example layout that includes a header:
-
-```tsx
-import { HeadContent, Scripts, createRootRoute } from '@tanstack/react-router'
-
-export const Route = createRootRoute({
-  head: () => ({
-    meta: [
-      { charSet: 'utf-8' },
-      { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-      { title: 'My App' },
-    ],
-  }),
-  shellComponent: ({ children }) => (
-    <html lang="en">
-      <head>
-        <HeadContent />
-      </head>
-      <body>
-        <header>
-          <nav>
-            <Link to="/">Home</Link>
-            <Link to="/about">About</Link>
-          </nav>
-        </header>
-        {children}
-        <Scripts />
-      </body>
-    </html>
-  ),
-})
-```
-
-More information on layouts can be found in the [Layouts documentation](https://tanstack.com/router/latest/docs/framework/react/guide/routing-concepts#layouts).
-
-## Server Functions
-
-TanStack Start provides server functions that allow you to write server-side code that seamlessly integrates with your client components.
-
-```tsx
-import { createServerFn } from '@tanstack/react-start'
-
-const getServerTime = createServerFn({
-  method: 'GET',
-}).handler(async () => {
-  return new Date().toISOString()
-})
-
-// Use in a component
-function MyComponent() {
-  const [time, setTime] = useState('')
-  
-  useEffect(() => {
-    getServerTime().then(setTime)
-  }, [])
-  
-  return <div>Server time: {time}</div>
-}
-```
-
-## API Routes
-
-You can create API routes by using the `server` property in your route definitions:
-
-```tsx
-import { createFileRoute } from '@tanstack/react-router'
-import { json } from '@tanstack/react-start'
-
-export const Route = createFileRoute('/api/hello')({
-  server: {
-    handlers: {
-      GET: () => json({ message: 'Hello, World!' }),
-    },
-  },
-})
-```
-
-## Data Fetching
-
-There are multiple ways to fetch data in your application. You can use TanStack Query to fetch data from a server. But you can also use the `loader` functionality built into TanStack Router to load the data for a route before it's rendered.
-
-For example:
-
-```tsx
-import { createFileRoute } from '@tanstack/react-router'
-
-export const Route = createFileRoute('/people')({
-  loader: async () => {
-    const response = await fetch('https://swapi.dev/api/people')
-    return response.json()
-  },
-  component: PeopleComponent,
-})
-
-function PeopleComponent() {
-  const data = Route.useLoaderData()
-  return (
-    <ul>
-      {data.results.map((person) => (
-        <li key={person.name}>{person.name}</li>
-      ))}
-    </ul>
-  )
-}
-```
-
-Loaders simplify your data fetching logic dramatically. Check out more information in the [Loader documentation](https://tanstack.com/router/latest/docs/framework/react/guide/data-loading#loader-parameters).
-
-# Demo files
-
-Files prefixed with `demo` can be safely deleted. They are there to provide a starting point for you to play around with the features you've installed.
-
-# Learn More
-
-You can learn more about all of the offerings from TanStack in the [TanStack documentation](https://tanstack.com).
-
-For TanStack Start specific documentation, visit [TanStack Start](https://tanstack.com/start).
+Apache License 2.0 — see the [LICENSE](LICENSE) file for details.
