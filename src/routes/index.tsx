@@ -236,6 +236,7 @@ function App() {
 				open={modalState === ModalState.BRIDGES}
 				onOpenChange={(open) => !open && setModalState(ModalState.IDLE)}
 				title="Bridges"
+        description=""
 			>
 				<BridgeDiscovery onClose={() => setModalState(ModalState.IDLE)} />
 			</Modal>
@@ -243,6 +244,7 @@ function App() {
 				open={modalState === ModalState.ENTERTAINMENT_AREAS}
 				onOpenChange={(open) => !open && setModalState(ModalState.IDLE)}
 				title="Entertainmen Areas"
+        description=""
 			>
 				<EntertainmentAreas />
 			</Modal>
@@ -250,6 +252,7 @@ function App() {
 				open={modalState === ModalState.VIDEO_INPUTS}
 				onOpenChange={(open) => !open && setModalState(ModalState.IDLE)}
 				title="Video Inputs"
+        description=""
 			>
 				<VideoInputs />
 			</Modal>

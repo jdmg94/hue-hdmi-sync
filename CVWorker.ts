@@ -97,14 +97,22 @@ const stopCapture = () => {
 		restartTimer = null
 	}
 	if (ffmpegProcess) {
-		ffmpegProcess.kill("SIGTERM")
-		ffmpegProcess = null
+		ffmpegProcess.kill("SIGKILL")
+		// Don't null ffmpegProcess here — the close handler already does it.
+		// Nulling early allows startCapture to spawn before the old process dies,
+		// causing "Device or resource busy" on /dev/video0.
 	}
 	accumOffset = 0
 }
 
 const startCapture = () => {
-	if (ffmpegProcess) return
+	if (ffmpegProcess) {
+		// Previous process still shutting down — wait for it to exit then retry
+		ffmpegProcess.once("close", () => { if (shouldRun) startCapture() })
+		return
+	}
+
+  console.log("##### opening video device: ", videoInput)
 
 	shouldRun = true
 	accumOffset = 0
@@ -115,13 +123,13 @@ const startCapture = () => {
 	// Downscale to 160x90 in FFmpeg so Node only sees ~648 KB/s instead of 373 MB/s.
 	const ffmpegArgs = isMac
 		? [
-			"-loglevel",    "warning",
+			"-loglevel",    "error",
 			"-f",           "avfoundation",
 			// Device supports 30.000030fps — must use 30, not the NTSC default 29.97.
 			"-framerate",   "30",
 			// Reduce probe buffer to 500k — sufficient for AVFoundation format detection.
 			// The original 50M caused ~50 frames (~1.67s) of buffering before first output.
-			"-probesize",   "500k",
+			"-probesize",   "1M",
 			// Disable FFmpeg's default live-input buffering to minimise capture latency.
 			"-fflags",      "nobuffer",
 			"-flags",       "low_delay",
@@ -136,9 +144,14 @@ const startCapture = () => {
 			"pipe:1",
 		  ]
 		: [
-			"-loglevel",    "warning",
+			"-loglevel",    "error",
 			"-f",           "v4l2",
 			"-input_format","mjpeg",
+			"-framerate",   "30",
+			"-probesize",   "1M",
+			"-fflags",      "nobuffer",
+			"-flags",       "low_delay",
+			"-avioflags",   "direct",
 			"-i",           videoInput,
 			"-vf",          `scale=${WIDTH}:${HEIGHT}`,
 			"-fps_mode",    "passthrough",
@@ -166,7 +179,7 @@ const startCapture = () => {
 		while (accumOffset - readOffset >= FRAME_SIZE) {
 			const now = Date.now()
 			if (now - lastSentAt >= FRAME_INTERVAL_MS) {
-				const view = new Uint8Array(accumBuf.buffer, accumBuf.byteOffset + readOffset, FRAME_SIZE)
+		        const view = new Uint8Array(accumBuf.buffer, accumBuf.byteOffset + readOffset, FRAME_SIZE)
 				processFrame(view)
 				lastSentAt = now
 			}
