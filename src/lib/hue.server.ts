@@ -1,5 +1,6 @@
 import { Worker } from "node:worker_threads";
 import mdns from "node-dns-sd";
+import { sleep } from "#/lib/utils"
 import { DISCOVERY } from "./constants";
 import { StreamingClient } from './StreamingClient.server'
 import type { BridgeClientCredentials, HueBridgeNetworkDevice } from "./types"
@@ -18,18 +19,19 @@ cvWorker.on("message", (msg: Uint32Array | { type: string; state: string; messag
     }
 })
 
-export const startStream = async (entertainmentAreaId: string, ip: string, credentials: BridgeClientCredentials, updateEntertainmentArea) => {
+export const startStream = async (entertainmentAreaId: string, ip: string, credentials: BridgeClientCredentials) => {
     if (!streamer) {
-        streamer = new StreamingClient(ip, credentials, updateEntertainmentArea)
+        streamer = new StreamingClient(ip, entertainmentAreaId, credentials)
     }
 
-    await streamer.start(entertainmentAreaId)
+    await streamer.start()
     cvWorker.postMessage("start")
 }
 
 export const stopStream = async () => {
     cvWorker.postMessage("stop")
     if (streamer?.isStreaming) {
+        streamer.transition(new Uint32Array()) // send a black frame before closing the socket
         streamer.stop();
     }
 }
@@ -55,7 +57,6 @@ export async function discover(): Promise<HueBridgeNetworkDevice[]> {
         const localSearch = await mdns.discover({
             name: DISCOVERY.MDNS_SERVICE,
         });
-
 
         const results = localSearch.map((item) => {
             const ip = item.address;

@@ -16,18 +16,32 @@ const HEADER_SIZE = 16;
 export class StreamingClient {
   private socket: dtls.Socket | null = null;
   private abortController: AbortController | null = null;
-  private entertainmentAreaId: string | null = null;
   private packetBuf: Buffer | null = null;
   private channelDataOffset = 0;
+ 
 
   constructor(
     private readonly bridgeUrl: string,
+    private readonly entertainmentAreaId: string,
     private readonly credentials: { username: string; clientkey: string },
-    private readonly updateAreaFn: (
-      id: string,
-      updates: Partial<EntertainmentArea> & { action: string }
-    ) => Promise<ResourceNode>
-  ) {}
+  ) {
+    // Build the pre-allocated packet buffer once per session.
+    // Only the 7-byte per-channel blocks change per frame; the header is constant.
+    const idBytes = Buffer.from(entertainmentAreaId);
+    this.channelDataOffset = HEADER_SIZE + idBytes.length;
+    this.packetBuf = Buffer.allocUnsafe(this.channelDataOffset + 7 * 7);
+
+    Buffer.from(ENTERTAINMENT_API.PROTOCOL_NAME).copy(this.packetBuf, 0);
+    this.packetBuf[9]  = ENTERTAINMENT_API.PROTOCOL_VERSION[0];
+    this.packetBuf[10] = ENTERTAINMENT_API.PROTOCOL_VERSION[1];
+    this.packetBuf[11] = ENTERTAINMENT_API.SEQUENCE_NUMBER;
+    this.packetBuf[12] = ENTERTAINMENT_API.RESERVED_SPACE;
+    this.packetBuf[13] = ENTERTAINMENT_API.RESERVED_SPACE;
+    this.packetBuf[14] = ENTERTAINMENT_API.COLOR_MODE.RGB;
+    this.packetBuf[15] = ENTERTAINMENT_API.RESERVED_SPACE;
+    idBytes.copy(this.packetBuf, HEADER_SIZE);
+
+  }
 
   /**
    * Check if streaming is currently active
@@ -49,32 +63,12 @@ export class StreamingClient {
    * // Now you can call transition() to send color updates
    */
   async start(
-    selectedAreaId: string,
     timeout: number = ENTERTAINMENT_API.DEFAULT_TIMEOUT
   ): Promise<void> {
-    this.entertainmentAreaId = selectedAreaId;
     this.abortController = new AbortController();
-
-    await this.updateAreaFn(selectedAreaId, {
-      action: "start",
-    });
 
     // Build the pre-allocated packet buffer once per session.
     // Only the 7-byte per-channel blocks change per frame; the header is constant.
-    const idBytes = Buffer.from(selectedAreaId);
-    this.channelDataOffset = HEADER_SIZE + idBytes.length;
-    this.packetBuf = Buffer.allocUnsafe(this.channelDataOffset + 7 * 7);
-
-    Buffer.from(ENTERTAINMENT_API.PROTOCOL_NAME).copy(this.packetBuf, 0);
-    this.packetBuf[9]  = ENTERTAINMENT_API.PROTOCOL_VERSION[0];
-    this.packetBuf[10] = ENTERTAINMENT_API.PROTOCOL_VERSION[1];
-    this.packetBuf[11] = ENTERTAINMENT_API.SEQUENCE_NUMBER;
-    this.packetBuf[12] = ENTERTAINMENT_API.RESERVED_SPACE;
-    this.packetBuf[13] = ENTERTAINMENT_API.RESERVED_SPACE;
-    this.packetBuf[14] = ENTERTAINMENT_API.COLOR_MODE.RGB;
-    this.packetBuf[15] = ENTERTAINMENT_API.RESERVED_SPACE;
-    idBytes.copy(this.packetBuf, HEADER_SIZE);
-
     this.socket = dtls.createSocket({
       timeout,
       port: ENTERTAINMENT_API.PORT,
@@ -90,7 +84,11 @@ export class StreamingClient {
       },
     } as unknown as dtls.Options);
 
-    return new Promise((resolve) => this.socket.on("connected", resolve));
+    return new Promise((resolve, reject) => {
+       this.socket?.on("connected", resolve);
+       this.socket?.on("error", (err: Error) => reject(new HueBridgeStreamError(`DTLS handshake failed: ${err.message}`)));
+       this.socket?.on("close", () => reject(new HueBridgeStreamError("DTLS socket closed before handshake completed")));
+    });
   }
 
   /**
@@ -101,22 +99,14 @@ export class StreamingClient {
    * @example
    * await streamingClient.stop();
    */
-  stop(): void {
+  stop(): Promise<void> {
     if (!this.socket) {
       throw new HueBridgeStreamError("No active datagram socket!");
     }
 
-    const id = this.entertainmentAreaId as string;
-    this.socket.on("close", () => {
-      this.updateAreaFn(id, {
-        action: "stop",
-      });
-    });
-
-    this.abortController!.abort();
-    this.entertainmentAreaId = null;
-    this.abortController = null;
-    this.socket = null;
+    return new Promise(resolve => {
+      this.socket.on("close", resolve)
+    })
   }
 
   /**
@@ -128,9 +118,7 @@ export class StreamingClient {
    * @throws {HueBridgeStreamError} If no streaming session is active
    */
   transition(colors: Uint32Array): void {
-    if (!this.socket || !this.packetBuf) {
-      throw new HueBridgeStreamError("No active datagram socket!");
-    }
+    if (!this.socket || !this.packetBuf) return;
 
     const buf = this.packetBuf;
     const base = this.channelDataOffset;
@@ -150,6 +138,6 @@ export class StreamingClient {
       buf[off + 6] = b;
     }
 
-    this.socket.send(buf);
+    this.socket.send(buf); 
   }
 }

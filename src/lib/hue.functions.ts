@@ -1,9 +1,11 @@
 import { createServerFn } from '@tanstack/react-start';
 import type { Axios } from 'axios';
 import { createAxiosWithLookup } from './axios';
+import { sleep } from "./utils"
 import { listVideoInputs } from './capture.server';
 import { discover, register, startStream, stopStream, updateVideoInput } from "./hue.server";
 import type { EntertainmentArea, HueBridgeNetworkDevice, HueBridgeRegistration } from "./types";
+
 
 let axios: Axios;
 let bridgeData: HueBridgeRegistration;
@@ -78,12 +80,22 @@ export const getVideoInputs = createServerFn().handler(() => {
 export const startStreaming = createServerFn()
   .inputValidator((data: { id: string }) => data)
   .handler(async ({ data }) => {
-    await startStream(data.id, bridgeData.ip, bridgeData.credentials, _updateEntertainmentArea)
+    const selectedArea = await _getEntertainmentArea(data.id)
+    if (selectedArea.status === "inactive") {
+      await _updateEntertainmentArea(data.id, {
+        action: "start" 
+      })
+      await sleep(500)
+      await startStream(data.id, bridgeData.ip, bridgeData.credentials)
+    }
   })
 
 export const stopStreaming = createServerFn()
   .handler(async () => {
-    stopStream()
+    await stopStream()
+    await _updateEntertainmentArea(data.id, {
+     action: "stop" 
+    })
   })
 
 export const updateCaptureDevice = createServerFn()
