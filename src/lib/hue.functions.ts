@@ -1,13 +1,11 @@
-import { createServerFn } from '@tanstack/react-start'
+import { createServerFn } from '@tanstack/react-start';
 import type { Axios } from 'axios';
 import { createAxiosWithLookup } from './axios';
 import { listVideoInputs } from './capture.server';
-import { discover, register } from "./hue.server"
-import { StreamingClient } from './StreamingClient.server';
-import type { EntertainmentArea, HueBridgeNetworkDevice, HueBridgeRegistration } from "./types"
+import { discover, register, startStream, stopStream, updateVideoInput } from "./hue.server";
+import type { EntertainmentArea, HueBridgeNetworkDevice, HueBridgeRegistration } from "./types";
 
 let axios: Axios;
-let streamer: StreamingClient;
 let bridgeData: HueBridgeRegistration;
 
 export const getAvailableBridges = createServerFn().handler(async () => {
@@ -54,7 +52,10 @@ const _getEntertainmentArea = async (id: string) => {
 export const getEntertainmentArea = createServerFn()
   .inputValidator((data: { id: string }) => data)
   .handler(async ({ data }) => {
-    return _getEntertainmentArea(data.id)
+    const response = await axios.get(`/entertainment_configuration/${data.id}`)
+    const wrapper = await response.data
+
+    return wrapper.data[0] as EntertainmentArea;
   })
 
 const _updateEntertainmentArea = async (id: string, updates: Partial<EntertainmentArea>) => {
@@ -77,25 +78,16 @@ export const getVideoInputs = createServerFn().handler(() => {
 export const startStreaming = createServerFn()
   .inputValidator((data: { id: string }) => data)
   .handler(async ({ data }) => {
-    console.log("starting the stream..")
-    if (!streamer) {
-      streamer = new StreamingClient(bridgeData.ip, bridgeData.credentials, _updateEntertainmentArea)
-      console.log("initialized streaming client")
-    }
-    
-    console.log("retrieving the entertainment area config..")
-    const selectedArea = await _getEntertainmentArea(data.id)
-    console.log("fethed the entertainment area: ", selectedArea)
-    
-    streamer.start(selectedArea)
-    console.log("enabled stream mode on the entertainment area")
-    // start the CVWorker or something
+    await startStream(data.id, bridgeData.ip, bridgeData.credentials, _updateEntertainmentArea)
   })
 
 export const stopStreaming = createServerFn()
   .handler(async () => {
-    if (streamer?.isStreaming) {
-      console.log("stopping the stream!")
-      streamer.stop();
-    }
+    stopStream()
+  })
+
+export const updateCaptureDevice = createServerFn()
+  .inputValidator((data: { nextInput: string }) => data)
+  .handler(({ data }) => {
+    updateVideoInput(data.nextInput)
   })

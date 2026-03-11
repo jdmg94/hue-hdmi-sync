@@ -1,157 +1,244 @@
-import sharp from "sharp"
 import { parentPort } from "worker_threads"
 import { spawn, ChildProcess } from "child_process"
-import { splitIntoLightstripGradientRegions as splitFrame} from "#/lib/utils"
 
-let shouldRun = true
+interface Rect {
+	x: number
+	y: number
+	width: number
+	height: number
+}
+
+interface FrameRegions {
+	regions: Rect[]
+	indices: number[]
+}
+
+const splitFrame = (size: { width: number; height: number }): FrameRegions => {
+	const halfHeight = Math.floor(size.height / 2)
+	const oneThirdWidth = Math.floor(size.width / 3)
+
+	const regions = [
+		{ x: 0, y: halfHeight, width: oneThirdWidth, height: halfHeight },         // 0: bottom-left
+		{ x: 0, y: 0, width: oneThirdWidth, height: halfHeight },                  // 1: top-left
+		{ x: oneThirdWidth, y: 0, width: oneThirdWidth, height: halfHeight },      // 2: top-center
+		{ x: oneThirdWidth * 2, y: 0, width: oneThirdWidth, height: halfHeight },  // 3: top-right
+		{ x: oneThirdWidth * 2, y: halfHeight, width: oneThirdWidth, height: halfHeight }, // 4: bottom-right
+	]
+
+	// Map 7 lightstrip zones to 5 unique regions (some zones share a region)
+	const indices = [0, 1, 1, 2, 3, 3, 4]
+
+	return { regions, indices }
+}
+
+const WIDTH = 720
+const HEIGHT = 480
+const FRAME_SIZE = WIDTH * HEIGHT * 3 // 43,200 bytes at 160x90 RGB24
+
+let shouldRun = false
+let videoInput = process.platform === "darwin" ? "0" : "/dev/video0"
 let ffmpegProcess: ChildProcess | null = null
-
-const WIDTH = 1280
-const HEIGHT = 720
-const FPS = 30
-const FRAME_SIZE = WIDTH * HEIGHT * 3 // RGB24 = 3 bytes per pixel
-
-const sleep = (delay: number) => new Promise(resolve => setTimeout(resolve, delay));
+let restartCount = 0
+let restartTimer: ReturnType<typeof setTimeout> | null = null
+let lastSentAt = 0
+const FRAME_INTERVAL_MS = 1000 / 30 // throttle to max 30 color updates/sec
 
 const { regions, indices } = splitFrame({ width: WIDTH, height: HEIGHT })
 
-// Pre-allocate reusable buffer for color data (7 zones × 3 colors = 21 values)
-const colorBuffer = new Uint32Array(21)
-// Pre-allocate array to store unique region colors
-const uniqueColors: number[][] = new Array(regions.length)
+// Pre-allocate reusable buffers — no allocations in the hot path
+const colorBuffer = new Uint32Array(21) // 7 zones × 3 channels
+const uniqueColors = new Array<[number, number, number]>(regions.length)
+const accumBuf = Buffer.allocUnsafe(FRAME_SIZE * 2)
+let accumOffset = 0
 
-const stopVideo = () => {
-  shouldRun = false
-  if (ffmpegProcess) {
-    ffmpegProcess.kill("SIGTERM")
-    ffmpegProcess = null
-  }
+function extractRegionAvg(frameData: Uint8Array, region: Rect): [number, number, number] {
+	let rSum = 0, gSum = 0, bSum = 0
+	const rowStride = WIDTH * 3
+	const endY = region.y + region.height
+	const endX = region.x + region.width
+
+	for (let y = region.y; y < endY; y++) {
+		const rowOffset = y * rowStride
+		for (let x = region.x; x < endX; x++) {
+			const offset = rowOffset + x * 3
+			rSum += frameData[offset]
+			gSum += frameData[offset + 1]
+			bSum += frameData[offset + 2]
+		}
+	}
+
+	const n = region.width * region.height
+	return [Math.round(rSum / n), Math.round(gSum / n), Math.round(bSum / n)]
 }
 
-const processFrame = async (frameBuffer: Buffer) => {
-  try {
-    // Create Sharp instance from raw RGB buffer
-    const image = sharp(frameBuffer, {
-      raw: {
-        width: WIDTH,
-        height: HEIGHT,
-        channels: 3,
-      },
-    })
+const processFrame = (frameData: Uint8Array): void => {
+	for (let i = 0; i < regions.length; i++) {
+		uniqueColors[i] = extractRegionAvg(frameData, regions[i])
+	}
 
-    // Calculate mean color for each unique region (no duplicates)
-    for (let i = 0; i < regions.length; i++) {
-      const region = regions[i]
+	let idx = 0
+	for (const regionIdx of indices) {
+		const [r, g, b] = uniqueColors[regionIdx]
+		colorBuffer[idx++] = r
+		colorBuffer[idx++] = g
+		colorBuffer[idx++] = b
+	}
 
-      // Extract region and calculate stats
-      const regionImage = image.clone().extract({
-        left: region.x,
-        top: region.y,
-        width: region.width,
-        height: region.height,
-      })
-
-      const stats = await regionImage.stats()
-
-      // Extract mean RGB values (Sharp returns stats per channel)
-      const r = Math.round(stats.channels[0].mean)
-      const g = Math.round(stats.channels[1].mean)
-      const b = Math.round(stats.channels[2].mean)
-
-      uniqueColors[i] = [r, g, b]
-    }
-
-    // Map unique colors to 7 lightstrip zones using indices
-    let bufferIndex = 0
-    for (const idx of indices) {
-      const [r, g, b] = uniqueColors[idx]
-      colorBuffer[bufferIndex++] = r
-      colorBuffer[bufferIndex++] = g
-      colorBuffer[bufferIndex++] = b
-    }
-
-    // Transfer buffer ownership for zero-copy message passing
-    const transferBuffer = colorBuffer.slice()
-    parentPort!.postMessage(transferBuffer, [transferBuffer.buffer])
-  } catch (error) {
-    console.error("Error processing frame:", error)
-  }
+	if (shouldRun) {
+		// Structured clone of 84 bytes is negligible; avoids the per-frame slice() allocation.
+		parentPort!.postMessage(colorBuffer)
+	}
 }
 
-const processVideo = async () => {
-  shouldRun = true
+const stopCapture = () => {
+	shouldRun = false
+	if (restartTimer) {
+		clearTimeout(restartTimer)
+		restartTimer = null
+	}
+	if (ffmpegProcess) {
+		ffmpegProcess.kill("SIGTERM")
+		ffmpegProcess = null
+	}
+	accumOffset = 0
+}
 
-  await sleep(1000)
+const startCapture = () => {
+	if (ffmpegProcess) return
 
-  // Spawn FFmpeg to capture video from /dev/video0
-  ffmpegProcess = spawn("ffmpeg", [
-    "-vcodec", "mjpeg",        // MJPEG from capture card
-    "-framerate", FPS.toString(),
-    "-i", "/dev/video0",             // HDMI capture device
-    "-f", "rawvideo",                // Output raw video
-    "-pix_fmt", "rgb24",             // RGB format (no BGR conversion needed)
-    "-vf", `fps=${FPS}`,             // Ensure consistent framerate
-    "pipe:1",                        // Output to stdout
-  ], {
-    stdio: ["ignore", "pipe", "pipe"],
-  })
+	shouldRun = true
+	accumOffset = 0
 
-  let frameBuffer = Buffer.alloc(0)
+	const isMac = process.platform === "darwin"
 
-  // Process stdout data from FFmpeg
-  ffmpegProcess.stdout?.on("data", async (chunk: Buffer) => {
-    if (!shouldRun) return
+	// Let AVFoundation/V4L2 negotiate the pixel format — do not force uyvy422.
+	// Downscale to 160x90 in FFmpeg so Node only sees ~648 KB/s instead of 373 MB/s.
+	const ffmpegArgs = isMac
+		? [
+			"-loglevel",    "warning",
+			"-f",           "avfoundation",
+			// Device supports 30.000030fps — must use 30, not the NTSC default 29.97.
+			"-framerate",   "30",
+			// Reduce probe buffer to 500k — sufficient for AVFoundation format detection.
+			// The original 50M caused ~50 frames (~1.67s) of buffering before first output.
+			"-probesize",   "500k",
+			// Disable FFmpeg's default live-input buffering to minimise capture latency.
+			"-fflags",      "nobuffer",
+			"-flags",       "low_delay",
+			"-avioflags",   "direct",
+			"-i",           videoInput,
+			"-vf",        `scale=${WIDTH}:${HEIGHT}`,
+			// passthrough: emit frames exactly as the device delivers them —
+			// no duplication, no dropping. Color analysis doesn't need a fixed rate.
+			"-fps_mode",  "passthrough",
+			"-f",         "rawvideo",
+			"-pix_fmt",   "rgb24",
+			"pipe:1",
+		  ]
+		: [
+			"-loglevel",    "warning",
+			"-f",           "v4l2",
+			"-input_format","mjpeg",
+			"-i",           videoInput,
+			"-vf",          `scale=${WIDTH}:${HEIGHT}`,
+			"-fps_mode",    "passthrough",
+			"-f",           "rawvideo",
+			"-pix_fmt",     "rgb24",
+			"pipe:1",
+		  ]
 
-    // Append new data to buffer
-    frameBuffer = Buffer.concat([frameBuffer, chunk])
+	ffmpegProcess = spawn("ffmpeg", ffmpegArgs, {
+		stdio: ["ignore", "pipe", "pipe"],
+	})
 
-    // Process complete frames
-    while (frameBuffer.length >= FRAME_SIZE) {
-      const frame = frameBuffer.subarray(0, FRAME_SIZE)
-      frameBuffer = frameBuffer.subarray(FRAME_SIZE)
+	// Schedule restart counter reset after 10s of stable operation
+	const stabilityTimer = setTimeout(() => { restartCount = 0 }, 10_000)
 
-      // Process frame asynchronously (don't block receiving more frames)
-      processFrame(frame)
-    }
-  })
+	// Synchronous data handler — no async, no Sharp, no queuing.
+	// Natural backpressure keeps the event loop free for parentPort messages.
+	ffmpegProcess.stdout?.on("data", (chunk: Buffer) => {
+		if (!shouldRun) return
 
-  // Handle FFmpeg errors
-  ffmpegProcess.stderr?.on("data", (data: Buffer) => {
-    // FFmpeg outputs a lot of info to stderr, only log if it looks like an error
-    const message = data.toString()
-    if (message.includes("error") || message.includes("Error")) {
-      console.error("FFmpeg error:", message)
-    }
-  })
+		chunk.copy(accumBuf, accumOffset)
+		accumOffset += chunk.length
 
-  ffmpegProcess.on("close", (code) => {
-    if (code !== 0 && shouldRun) {
-      console.error(`FFmpeg process exited with code ${code}`)
-    }
-  })
+		let readOffset = 0
+		while (accumOffset - readOffset >= FRAME_SIZE) {
+			const now = Date.now()
+			if (now - lastSentAt >= FRAME_INTERVAL_MS) {
+				const view = new Uint8Array(accumBuf.buffer, accumBuf.byteOffset + readOffset, FRAME_SIZE)
+				processFrame(view)
+				lastSentAt = now
+			}
+			readOffset += FRAME_SIZE // always drain — never let the pipe backlog
+		}
 
-  ffmpegProcess.on("error", (error) => {
-    console.error("FFmpeg spawn error:", error)
-  })
+		// Compact: shift unprocessed remainder to front of buffer
+		if (readOffset > 0 && readOffset < accumOffset) {
+			accumBuf.copyWithin(0, readOffset, accumOffset)
+		}
+		accumOffset -= readOffset
+	})
+
+	ffmpegProcess.stderr?.on("data", (data: Buffer) => {
+		const msg = data.toString()
+		if (msg.trim()) console.error("[CVWorker] ffmpeg:", msg.trimEnd())
+	})
+
+	ffmpegProcess.on("close", (code, signal) => {
+		clearTimeout(stabilityTimer)
+		ffmpegProcess = null
+		accumOffset = 0
+
+		// Intentional stop or we killed it — do not restart
+		if (!shouldRun || signal === "SIGTERM" || signal === "SIGKILL") return
+
+		if (restartCount >= 5) {
+			parentPort!.postMessage({
+				type: "status",
+				state: "error",
+				message: `FFmpeg failed after 5 restart attempts`,
+			})
+			shouldRun = false
+			return
+		}
+
+		restartCount++
+		console.error(`[CVWorker] ffmpeg exited (code=${code}), restarting in 2s (attempt ${restartCount}/5)`)
+		restartTimer = setTimeout(startCapture, 2_000)
+	})
+
+	ffmpegProcess.on("error", (err) => {
+		console.error("[CVWorker] ffmpeg spawn error:", err.message)
+	})
 }
 
 parentPort?.on("message", (message) => {
-  switch (message) {
-    case "start":
-      processVideo()
-      break
+	switch (message) {
+		case "start":
+			restartCount = 0
+			startCapture()
+			break
 
-    case "stop":
-      stopVideo()
-      break
+		case "stop":
+			stopCapture()
+			break
 
-    case "reset":
-      stopVideo()
-      sleep(250).then(() => {
-        processVideo()
-      })
-      break
+		case "reset":
+			stopCapture()
+			restartTimer = setTimeout(startCapture, 250)
+			break
 
-    default: // do nothing
-  }
+		default:
+			try {
+				const action = JSON.parse(message)
+				if (action.type === "updateVideoInput") {
+					videoInput = action.payload
+					if (shouldRun) {
+						stopCapture()
+						restartTimer = setTimeout(startCapture, 250)
+					}
+				}
+			} catch {}
+	}
 })

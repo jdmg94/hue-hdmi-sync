@@ -13,6 +13,7 @@ import {
 	initializeBridge,
 	startStreaming,
 	stopStreaming,
+	updateCaptureDevice,
 } from "#/lib/hue.functions";
 import type { HueBridgeRegistration } from "#/lib/types";
 
@@ -54,9 +55,20 @@ function App() {
 
 	useEffect(() => {
 		if (bridgeReg) {
-			initializeBridge({ data: bridgeReg });
+			initializeBridge({ data: bridgeReg });			
 		}
-	}, [bridgeReg]);
+		if (selectedVideoInputId) {
+			updateCaptureDevice({ data: { nextInput: selectedVideoInputId }})
+		}
+	}, [bridgeReg, selectedVideoInputId]);
+
+	useEffect(() => {
+		if (isPlaying && selectedAreaId) {
+			startStreaming({ data: { id: selectedAreaId } });
+		} else {
+			stopStreaming();
+		}
+	}, [isPlaying, selectedAreaId]);
 
 	useEffect(() => {
 		if (isPlaying && selectedAreaId) {
@@ -123,7 +135,7 @@ function App() {
 							</p>
 							{bridgeReg ? (
 								<p className="text-base font-medium text-[var(--sea-ink)]">
-									{bridgeReg.ip}
+									{bridgeReg.name}
 								</p>
 							) : (
 								<p className="text-base text-[var(--sea-ink-soft)] italic">
@@ -184,6 +196,7 @@ function App() {
 				</button>
 				<button
 					type="button"
+					disabled={!bridgeReg}
 					onClick={() => setModalState(ModalState.ENTERTAINMENT_AREAS)}
 					className="island-shell feature-card rise-in rounded-2xl p-5 text-left transition hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
 					style={{ animationDelay: `${1 * 90 + 80}ms` }}
