@@ -115,7 +115,7 @@ const startCapture = () => {
 	// Downscale to 160x90 in FFmpeg so Node only sees ~648 KB/s instead of 373 MB/s.
 	const ffmpegArgs = isMac
 		? [
-			"-loglevel",    "warning",
+			"-loglevel",    "error",
 			"-f",           "avfoundation",
 			// Device supports 30.000030fps — must use 30, not the NTSC default 29.97.
 			"-framerate",   "30",
@@ -136,9 +136,14 @@ const startCapture = () => {
 			"pipe:1",
 		  ]
 		: [
-			"-loglevel",    "warning",
+			"-loglevel",    "error",
 			"-f",           "v4l2",
 			"-input_format","mjpeg",
+			"-framerate",   "30",
+			"-probesize",   "500k",
+			"-fflags",      "nobuffer",
+			"-flags",       "low_delay",
+			"-avioflags",   "direct",
 			"-i",           videoInput,
 			"-vf",          `scale=${WIDTH}:${HEIGHT}`,
 			"-fps_mode",    "passthrough",
