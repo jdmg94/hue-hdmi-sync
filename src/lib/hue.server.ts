@@ -1,7 +1,43 @@
+import { Worker } from "node:worker_threads";
 import mdns from "node-dns-sd";
-import { dtls } from "node-dtls-client";
 import { DISCOVERY } from "./constants";
+import { StreamingClient } from './StreamingClient.server'
 import type { BridgeClientCredentials, HueBridgeNetworkDevice } from "./types"
+
+let streamer: StreamingClient;
+const cvWorker = new Worker(new URL("../../CVWorker.ts", import.meta.url), {
+    execArgv: ["--experimental-strip-types"],
+})
+
+
+cvWorker.on("message", (msg: Uint32Array | { type: string; state: string; message?: string }) => {
+    if (msg instanceof Uint32Array) {
+        streamer.transition(msg)
+    } else if (msg.type === "status") {
+        console.error(`[CVWorker] ${msg.state}: ${msg.message ?? ""}`)
+    }
+})
+
+export const startStream = async (entertainmentAreaId: string, ip: string, credentials: BridgeClientCredentials, updateEntertainmentArea) => {
+    if (!streamer) {
+        streamer = new StreamingClient(ip, credentials, updateEntertainmentArea)
+    }
+
+    await streamer.start(entertainmentAreaId)
+    cvWorker.postMessage("start")
+}
+
+export const stopStream = async () => {
+    cvWorker.postMessage("stop")
+    if (streamer?.isStreaming) {
+        streamer.stop();
+    }
+}
+
+export const updateVideoInput = (payload: string) => {
+    const message = JSON.stringify({ type: "updateVideoInput", payload })
+    cvWorker.postMessage(message)
+}
 
 /**
  * Discovers Philips Hue Bridges on the local network using mDNS.
@@ -25,7 +61,7 @@ export async function discover(): Promise<HueBridgeNetworkDevice[]> {
             const ip = item.address;
             const [buffer] = item.packet.additionals;
             const id = buffer.rdata.bridgeid;
-            const name = item.model_name
+            const name = item.modelName
 
             return {
                 id,
@@ -33,8 +69,6 @@ export async function discover(): Promise<HueBridgeNetworkDevice[]> {
                 ip,
             };
         });
-
-        console.log("the discovery results: ", results)
 
         return results
     } catch (mdnsError) {

@@ -35,7 +35,7 @@ const BridgeDiscovery = ({ onClose }: BridgeDiscoveryProps) => {
      <ul>
         {data?.map(item => (
             <li key={item.id}>
-                {item.id}
+                {item.name}
                 {" "}
                 ({item.ip})
                 {" "}
@@ -50,7 +50,7 @@ const BridgeDiscovery = ({ onClose }: BridgeDiscoveryProps) => {
                         })
                         .then((credentials) => {
                             if (credentials) {
-                                updateRegistration({ id: item.id, ip: item.ip, credentials })
+                                updateRegistration({ id: item.id, ip: item.ip, name: item.name, credentials })
                                 onClose?.()
                                 alert("Bridge paired succesfully!")
                             }

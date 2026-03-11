@@ -10,10 +10,15 @@ import type { EntertainmentArea, ResourceNode } from "#/lib/types";
 /**
  * Streaming client for high-frequency Entertainment API updates
  */
+// Static header size: "HueStream"(9) + version(2) + seq(1) + reserved(2) + colorMode(1) + reserved(1)
+const HEADER_SIZE = 16;
+
 export class StreamingClient {
   private socket: dtls.Socket | null = null;
   private abortController: AbortController | null = null;
   private entertainmentAreaId: string | null = null;
+  private packetBuf: Buffer | null = null;
+  private channelDataOffset = 0;
 
   constructor(
     private readonly bridgeUrl: string,
@@ -53,6 +58,22 @@ export class StreamingClient {
     await this.updateAreaFn(selectedAreaId, {
       action: "start",
     });
+
+    // Build the pre-allocated packet buffer once per session.
+    // Only the 7-byte per-channel blocks change per frame; the header is constant.
+    const idBytes = Buffer.from(selectedAreaId);
+    this.channelDataOffset = HEADER_SIZE + idBytes.length;
+    this.packetBuf = Buffer.allocUnsafe(this.channelDataOffset + 7 * 7);
+
+    Buffer.from(ENTERTAINMENT_API.PROTOCOL_NAME).copy(this.packetBuf, 0);
+    this.packetBuf[9]  = ENTERTAINMENT_API.PROTOCOL_VERSION[0];
+    this.packetBuf[10] = ENTERTAINMENT_API.PROTOCOL_VERSION[1];
+    this.packetBuf[11] = ENTERTAINMENT_API.SEQUENCE_NUMBER;
+    this.packetBuf[12] = ENTERTAINMENT_API.RESERVED_SPACE;
+    this.packetBuf[13] = ENTERTAINMENT_API.RESERVED_SPACE;
+    this.packetBuf[14] = ENTERTAINMENT_API.COLOR_MODE.RGB;
+    this.packetBuf[15] = ENTERTAINMENT_API.RESERVED_SPACE;
+    idBytes.copy(this.packetBuf, HEADER_SIZE);
 
     this.socket = dtls.createSocket({
       timeout,
@@ -100,63 +121,35 @@ export class StreamingClient {
 
   /**
    * Sends color updates to the entertainment area via DTLS streaming.
-   * Each array element represents one channel/zone with RGB values (0-255).
+   * Accepts a flat Uint32Array of [R, G, B, R, G, B, ...] values (7 zones × 3 channels = 21 values).
+   * Uses a pre-allocated packet buffer — zero heap allocations in the hot path.
    *
-   * @param colors - Array of [R, G, B] arrays, one per zone/channel
+   * @param colors - Flat Uint32Array: [R0, G0, B0, R1, G1, B1, ...]
    * @throws {HueBridgeStreamError} If no streaming session is active
-   *
-   * @example
-   * // For a gradient strip with 7 zones, send 7 colors:
-   * streamingClient.transition([
-   *   [255, 0, 0],    // Zone 0: Red
-   *   [0, 255, 0],    // Zone 1: Green
-   *   [0, 0, 255],    // Zone 2: Blue
-   *   // ... 4 more zones
-   * ]);
    */
-  transition(colors: number[][]): void {
-    console.log("transitioning colors!")
-    if (!this.socket) {
+  transition(colors: Uint32Array): void {
+    if (!this.socket || !this.packetBuf) {
       throw new HueBridgeStreamError("No active datagram socket!");
     }
 
-        console.log("assembling message buffer!")
+    const buf = this.packetBuf;
+    const base = this.channelDataOffset;
+    const zones = colors.length / 3;
 
+    for (let i = 0; i < zones; i++) {
+      const off = base + i * 7;
+      const r = colors[i * 3];
+      const g = colors[i * 3 + 1];
+      const b = colors[i * 3 + 2];
+      buf[off]     = i; // channel id
+      buf[off + 1] = r;
+      buf[off + 2] = r;
+      buf[off + 3] = g;
+      buf[off + 4] = g;
+      buf[off + 5] = b;
+      buf[off + 6] = b;
+    }
 
-    const protocol = Buffer.from(ENTERTAINMENT_API.PROTOCOL_NAME);
-    const version = Buffer.from(ENTERTAINMENT_API.PROTOCOL_VERSION);
-    const sequenceNumber = Buffer.from([ENTERTAINMENT_API.SEQUENCE_NUMBER]);
-    const reservedSpaces = Buffer.from([
-      ENTERTAINMENT_API.RESERVED_SPACE,
-      ENTERTAINMENT_API.RESERVED_SPACE,
-    ]);
-    const colorMode = Buffer.from([ENTERTAINMENT_API.COLOR_MODE.RGB]);
-    const reservedSpace = Buffer.from([ENTERTAINMENT_API.RESERVED_SPACE]);
-    const groupId = Buffer.from(this.entertainmentAreaId as string);
-    const rgbChannels = colors.map((rgb, channelIndex) => {
-      return Buffer.from([
-        channelIndex, // RGB Channel Id
-        rgb[0], // R 16bit
-        rgb[0], // R 16bit
-        rgb[1], // G 16bit
-        rgb[1], // G 16bit
-        rgb[2], // B 16bit
-        rgb[2], // B 16bit
-      ]);
-    });
-
-    const message = Buffer.concat([
-      protocol,
-      version,
-      sequenceNumber,
-      reservedSpaces,
-      colorMode,
-      reservedSpace,
-      groupId,
-      ...rgbChannels,
-    ]);
-
-    console.log("sending color updates")
-    this.socket.send(message);
+    this.socket.send(buf);
   }
 }

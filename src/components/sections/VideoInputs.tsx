@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Label } from "#/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "#/components/ui/radio-group";
 import { usePersistedState } from "#/hooks/usePersistedState";
-import { getVideoInputs } from "#/lib/hue.functions";
+import { getVideoInputs, updateCaptureDevice } from "#/lib/hue.functions";
 
 const VideoInputs = () => {
     const [selected, setSelected] = usePersistedState("video-input", "")
@@ -12,6 +12,11 @@ const VideoInputs = () => {
         error,
         data
     } = useQuery({ queryKey: ['video-inputs'], queryFn: getVideoInputs })
+
+    const updateSelectedValue = (nextInput: string) => {
+        updateCaptureDevice({ data: { nextInput }})
+        setSelected(nextInput)
+    }
 
     if (isError) {
         return (
@@ -32,8 +37,8 @@ const VideoInputs = () => {
     }
 
     return (
-        <RadioGroup value={selected} onValueChange={setSelected}>
-            {data.map((item: { id: string; name: string }) => (
+        <RadioGroup value={selected} onValueChange={updateSelectedValue}>
+            {data.map((item) => (
                 <div key={item.id} className="flex items-center gap-2">
                     <RadioGroupItem value={item.id} id={item.id} className="cursor-pointer" />
                     <Label htmlFor={item.id} className="cursor-pointer">{item.name}</Label>
