@@ -6,7 +6,7 @@
     "#/*": "./src/*"
   },
   "scripts": {
-    "dev": "NODE_EXTRA_CA_CERTS=./signify.pem NODE_OPTIONS='--experimental-strip-types' vite dev --port 3000 --host 0.0.0.0",
+    "dev": "NODE_EXTRA_CA_CERTS=./signify.pem vite dev --port 3000 --host 0.0.0.0",
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",

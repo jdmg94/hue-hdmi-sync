@@ -70,14 +70,6 @@ function App() {
 		}
 	}, [isPlaying, selectedAreaId]);
 
-	useEffect(() => {
-		if (isPlaying && selectedAreaId) {
-			startStreaming({ data: { id: selectedAreaId } });
-		} else {
-			stopStreaming();
-		}
-	}, [isPlaying, selectedAreaId]);
-
 	const selectedArea = areas?.find(
 		(a: { id: string; name: string }) => a.id === selectedAreaId,
 	);

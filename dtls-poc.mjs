@@ -7,7 +7,7 @@ import { dtls } from "node-dtls-client";
 import { readFileSync } from "node:fs";
 
 // ── Config ────────────────────────────────────────────────────────────────────
-const creds = JSON.parse(readFileSync(new URL("./hue-credentials.json", import.meta.url)));
+const creds = JSON.parse(readFileSync(new URL("./credentials.json", import.meta.url)));
 const BRIDGE_IP        = creds.bridgeIp;
 const USERNAME         = creds.username;
 const CLIENTKEY        = creds.clientkey;
