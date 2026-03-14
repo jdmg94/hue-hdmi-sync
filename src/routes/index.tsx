@@ -188,7 +188,7 @@ function App() {
 				</button>
 				<button
 					type="button"
-					disabled={!bridgeReg}
+					disabled={!bridgeReg || isPlaying}
 					onClick={() => setModalState(ModalState.ENTERTAINMENT_AREAS)}
 					className="island-shell feature-card rise-in rounded-2xl p-5 text-left transition hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
 					style={{ animationDelay: `${1 * 90 + 80}ms` }}
@@ -207,6 +207,7 @@ function App() {
 				</button>
 				<button
 					type="button"
+          disabled={isPlaying}
 					onClick={() => setModalState(ModalState.VIDEO_INPUTS)}
 					className="island-shell feature-card rise-in rounded-2xl p-5 text-left transition hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer flex flex-start flex-col"
 					style={{ animationDelay: `${2 * 90 + 80}ms` }}
@@ -228,7 +229,7 @@ function App() {
 				open={modalState === ModalState.BRIDGES}
 				onOpenChange={(open) => !open && setModalState(ModalState.IDLE)}
 				title="Bridges"
-        description=""
+        description={bridgeReg ? "All setup!" : "Pair your bridge"}
 			>
 				<BridgeDiscovery onClose={() => setModalState(ModalState.IDLE)} />
 			</Modal>
@@ -236,7 +237,7 @@ function App() {
 				open={modalState === ModalState.ENTERTAINMENT_AREAS}
 				onOpenChange={(open) => !open && setModalState(ModalState.IDLE)}
 				title="Entertainmen Areas"
-        description=""
+        description="Select a target"
 			>
 				<EntertainmentAreas />
 			</Modal>
@@ -244,7 +245,7 @@ function App() {
 				open={modalState === ModalState.VIDEO_INPUTS}
 				onOpenChange={(open) => !open && setModalState(ModalState.IDLE)}
 				title="Video Inputs"
-        description=""
+        description="Choose your source"
 			>
 				<VideoInputs />
 			</Modal>
