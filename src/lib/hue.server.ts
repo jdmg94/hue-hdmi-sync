@@ -31,7 +31,7 @@ export const startStream = async (entertainmentAreaId: string, ip: string, crede
 export const stopStream = async () => {
     cvWorker.postMessage("stop")
     if (streamer?.isStreaming) {
-        streamer.transition(new Uint32Array()) // send a black frame before closing the socket
+        streamer.transition(new Uint32Array(21)) // send a black frame before closing the socket
         streamer.stop();
     }
 }

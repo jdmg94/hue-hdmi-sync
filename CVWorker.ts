@@ -135,9 +135,11 @@ const startCapture = () => {
 			"-flags",       "low_delay",
 			"-avioflags",   "direct",
 			"-i",           videoInput,
-			"-vf",        `scale=${WIDTH}:${HEIGHT}`,
-			// passthrough: emit frames exactly as the device delivers them —
-			// no duplication, no dropping. Color analysis doesn't need a fixed rate.
+			// setpts=N/(30*TB): replace device timestamps with a strictly
+			// monotonic sequence derived from frame count (N) so the rawvideo
+			// muxer never sees duplicate or out-of-order DTS values regardless
+			// of what the capture card reports.
+			"-vf",        `scale=${WIDTH}:${HEIGHT},setpts=N/(30*TB)`,
 			"-fps_mode",  "passthrough",
 			"-f",         "rawvideo",
 			"-pix_fmt",   "rgb24",
@@ -153,7 +155,7 @@ const startCapture = () => {
 			"-flags",       "low_delay",
 			"-avioflags",   "direct",
 			"-i",           videoInput,
-			"-vf",          `scale=${WIDTH}:${HEIGHT}`,
+			"-vf",          `scale=${WIDTH}:${HEIGHT},setpts=N/(30*TB)`,
 			"-fps_mode",    "passthrough",
 			"-f",           "rawvideo",
 			"-pix_fmt",     "rgb24",
